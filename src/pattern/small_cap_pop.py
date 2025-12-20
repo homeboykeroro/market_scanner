@@ -26,13 +26,17 @@ def analyse_small_cap_pop(minute_df, daily_df) -> None:
     close_pct_df = minute_df.loc[:, idx[:, 'Close Change%']].rename(columns={'Close Change%': 'Compare'})
     #debug [-1] -> [0] 
     #get_previous_close_idx = 
-    previous_close_pct_df = (((minute_df.loc[:, idx[:, 'Close']].sub(daily_df.loc[:, idx[:, 'Close']].iloc[[0]].values))
-                                                                .div(daily_df.loc[:, idx[:, 'Close']].iloc[[0]].values))
+    us_current_datetime = datetime.datetime.now().astimezone(pytz.timezone('US/Eastern'))
+    previous_day_df = daily_df.iloc[[0]] if us_current_datetime.time() < datetime.time(20, 0, 0) else daily_df.iloc[[-1]]
+    print(f'Analyse small cap pop previous day value: {previous_day_df.iloc[[0]].index[-1]}')
+    
+    previous_close_pct_df = (((minute_df.loc[:, idx[:, 'Close']].sub(previous_day_df.loc[:, idx[:, 'Close']].values))
+                                                                .div(previous_day_df.loc[:, idx[:, 'Close']].values))
                                                                 .mul(100)).rename(columns={'Close': 'Compare'})
     lower_body_df = minute_df.loc[:, idx[:, 'Candle Lower Body']].rename(columns={'Candle Lower Body': 'Compare'})
     
-    previous_close_df = daily_df.loc[:, idx[:, 'Close']].iloc[[0]].rename(columns={'Close': 'Compare'})
-    previous_open_df = daily_df.loc[:, idx[:, 'Open']].iloc[[0]].rename(columns={'Open': 'Compare'})
+    previous_close_df = previous_day_df.loc[:, idx[:, 'Close']].rename(columns={'Close': 'Compare'})
+    previous_open_df = previous_day_df.loc[:, idx[:, 'Open']].rename(columns={'Open': 'Compare'})
     previos_close_above_previous_open_boolean_df = (previous_close_df > previous_open_df)
     
     previos_close_above_previous_open_upper_body_df = previous_close_df.where(previos_close_above_previous_open_boolean_df.values)
@@ -95,17 +99,18 @@ def analyse_small_cap_pop(minute_df, daily_df) -> None:
                         total_volume = int(minute_df.loc[occurrence_idx, (ticker, 'Total Volume')])
                         
                         #debug [-1] -> [0] 
-                        yesterday_close = float(daily_df.loc[daily_df.index[-0], (ticker, 'Close')])
-                        yesterday_close_to_last_pct = float(previous_close_pct_df.loc[occurrence_idx, (ticker, 'Compare')])
+                        yesterday_close = float(previous_day_df.loc[previous_day_df.index[-1], (ticker, 'Close')])
+                        previous_close_pct = float(previous_close_pct_df.loc[occurrence_idx, (ticker, 'Compare')])
                         
                         hit_scanner_datetime_display = convert_into_human_readable_time(occurrence_idx)
                         read_out_pop_up_time = convert_into_read_out_time(occurrence_idx)
                         
-                        readout_message = f'{" ".join(ticker)} is popping up {round(yesterday_close_to_last_pct, 2)}% at {read_out_pop_up_time}'
-                        display_message = f'{ticker} is popping up {round(yesterday_close_to_last_pct, 2)}% at {hit_scanner_datetime_display}, close: {close}, previous close: {yesterday_close}, volume: {volume:,.2f}, total volume: {total_volume:,.2f}'
+                        readout_message = f'{" ".join(ticker)} is popping up {round(previous_close_pct, 2)}% at {read_out_pop_up_time}'
+                        display_message = f'{ticker} is popping up {round(previous_close_pct, 2)}% at {hit_scanner_datetime_display}, close: {close}, previous close: {yesterday_close}, volume: {volume:,.2f}, total volume: {total_volume:,.2f}'
                         readout_message_list.append(readout_message)
                         display_message_list.append(display_message)
                         save_db_params_list.append((ticker, occurrence_idx))
+                        print(f'${ticker} small cap pop, hit scanner datetime: {occurrence_idx}')
         
         print(f'Small cap pop analyse time: {time.time() - analyse_start_time} seconds')
         

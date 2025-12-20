@@ -1,87 +1,154 @@
+import datetime
 import time
 import pandas as pd
-from pandas.core.frame import DataFrame
+import pytz
 
-from utils.dataframe_util import derive_idx_df
+from utils.datetime_util import convert_into_human_readable_time, convert_into_read_out_time
+from utils.dataframe_util import derive_idx_df, get_ticker_to_occurrence_idx_list
 from utils.logger import Logger
+
+from database.sqlite_connector import execute_in_transaction
 
 idx = pd.IndexSlice
 logger = Logger()
 
-MIN_MARUBOZU_RATIO = 65
-MIN_CLOSE_PCT = 4.2
-MIN_VOLUME = 3000
+MIN_MARUBOZU_RATIO = 40
+MIN_CLOSE_PCT = 4
+MIN_MA_VOLUME = 3000
+HIT_SCANNER_VALID_PERIOD_IN_MIN = 5
         
-def analyse_small_cap_ramp_up(src_df):
-    start_time = time.time()
+def analyse_small_cap_ramp_up(minute_df, daily_df):
+    analyse_start_time = time.time()
     
-    close_df = src_df.loc[:, idx[:, 'Close']]
-    close_pct_df = src_df.loc[:, idx[:, 'Close Change%']].rename(columns={'Close Change%': 'Compare'})
-    previous_close_df = src_df.loc[:, idx[:, 'Previous Close']]
-    previous_close_pct_df = src_df.loc[:, idx[:, 'Previous Close']]
-    candle_colour_df = src_df.loc[:, idx[:, 'Candle Colour']].rename(columns={'Candle Colour': 'Compare'})
-    marubozu_ratio_df = src_df.loc[:, idx[:, 'Marubozu Ratio']].rename(columns={'Marubozu Ratio': 'Compare'})
-    volume_df = src_df.loc[:, idx[:, 'Volume']].rename(columns={'Volume': 'Compare'})
-    total_volume_df = src_df.loc[:, idx[:, 'Total Volume']]
-    vol_20_ma_df = src_df.loc[:, idx[:, '20MA Volume']].rename(columns={'20MA Volume': 'Compare'})
-    vol_50_ma_df = src_df.loc[:, idx[:, '50MA Volume']].rename(columns={'50MA Volume': 'Compare'})
+    us_current_datetime = datetime.datetime.now().astimezone(pytz.timezone('US/Eastern'))
+    previous_day_df = daily_df.iloc[[0]] if us_current_datetime.time() < datetime.time(20, 0, 0) else daily_df.iloc[[-1]]
+    print(f'Analyse small cap pop ramp up previous day value: {previous_day_df.iloc[[0]].index[-1]}')
+    
+    close_pct_df = minute_df.loc[:, idx[:, 'Close Change%']].rename(columns={'Close Change%': 'Compare'})
+    previous_close_df = previous_day_df.loc[:, idx[:, 'Close']] 
+    previous_close_pct_df = (((minute_df.loc[:, idx[:, 'Close']].sub(previous_close_df.values))
+                                                                .div(previous_close_df.values))
+                                                                .mul(100))
+    
+    candle_colour_df = minute_df.loc[:, idx[:, 'Candle Colour']].rename(columns={'Candle Colour': 'Compare'})
+    marubozu_ratio_df = minute_df.loc[:, idx[:, 'Marubozu Ratio']].rename(columns={'Marubozu Ratio': 'Compare'})
+    
+    volume_df = minute_df.loc[:, idx[:, 'Volume']].rename(columns={'Volume': 'Compare'})
+    vol_20_ma_df = minute_df.loc[:, idx[:, '20MA Volume']].rename(columns={'20MA Volume': 'Compare'})
+    vol_50_ma_df = minute_df.loc[:, idx[:, '50MA Volume']].rename(columns={'50MA Volume': 'Compare'})
     
     green_candle_df = (candle_colour_df == 'GREEN')
     marubozu_boolean_df = (marubozu_ratio_df >= MIN_MARUBOZU_RATIO)
     candle_close_pct_boolean_df = (close_pct_df >= MIN_CLOSE_PCT)
-    ramp_up_boolean_df = (green_candle_df) & (marubozu_boolean_df) & (candle_close_pct_boolean_df)
-    above_vol_20_ma_boolean_df = (volume_df >= vol_20_ma_df) & (vol_20_ma_df >= MIN_VOLUME) & (ramp_up_boolean_df)
-    above_vol_50_ma_boolean_df = (volume_df >= vol_50_ma_df) & (vol_50_ma_df >= MIN_VOLUME) & (ramp_up_boolean_df)
+    above_vol_20_ma_boolean_df = (volume_df >= vol_20_ma_df) & (vol_20_ma_df >= MIN_MA_VOLUME)
+    above_vol_50_ma_boolean_df = (volume_df >= vol_50_ma_df) & (vol_50_ma_df >= MIN_MA_VOLUME)
     
-    above_vol_20_ma_result_boolean_df = above_vol_20_ma_boolean_df.iloc[-NOTIFY_PERIOD:]
-    above_vol_20_ma_result_series = above_vol_20_ma_result_boolean_df.any()
+    ramp_up_boolean_df = (green_candle_df) & (marubozu_boolean_df) & (candle_close_pct_boolean_df)
+    ma_20_ramp_up_boolean_df = (above_vol_20_ma_boolean_df) & (ramp_up_boolean_df)
+    ma_50_ramp_up_boolean_df = (above_vol_50_ma_boolean_df) & (ramp_up_boolean_df)
+    
+    ticker_to_ma_20_occurrence_idx_list_dict = get_ticker_to_occurrence_idx_list(ma_20_ramp_up_boolean_df)
+    ticker_to_ma_50_occurrence_idx_list_dict = get_ticker_to_occurrence_idx_list(ma_50_ramp_up_boolean_df)
+    
+    above_vol_20_ma_result_series = ma_20_ramp_up_boolean_df.any()
     above_vol_20_ma_ticker_list = above_vol_20_ma_result_series.index[above_vol_20_ma_result_series].get_level_values(0).tolist()
     
-    above_vol_50_ma_result_boolean_df = above_vol_50_ma_boolean_df.iloc[-NOTIFY_PERIOD:]
-    above_vol_50_ma_result_series = above_vol_50_ma_result_boolean_df.any()
+    above_vol_50_ma_result_series = ma_50_ramp_up_boolean_df.any()
     above_vol_50_ma_ticker_list = above_vol_50_ma_result_series.index[above_vol_50_ma_result_series].get_level_values(0).tolist()
     
-    above_vol_20_ma_ticker_list = [ticker for ticker in above_vol_20_ma_ticker_list if ticker not in above_vol_50_ma_ticker_list]
-    
-    if len(above_vol_20_ma_ticker_list) > 0 or len(above_vol_50_ma_ticker_list) > 0:
-        result_ticker_list = [above_vol_20_ma_ticker_list, above_vol_50_ma_ticker_list]
+    if len(above_vol_20_ma_ticker_list) > 0:
+        ma_20_ramp_up_readout_message_list = []
+        ma_20_ramp_up_display_message_list = []
+        ma_20_ramp_up_save_db_params_list = []
         
-        for list_idx, ticker_list in enumerate(result_ticker_list):
-            if len(ticker_list) > 0:
-                ma_val = '20' if (list_idx == 0) else '50'
-                above_ma_df = above_vol_20_ma_boolean_df if (list_idx == 0) else above_vol_50_ma_boolean_df
-                ma_vol_df = vol_20_ma_df if (list_idx == 0) else vol_50_ma_df
+        for ticker in above_vol_20_ma_ticker_list:
+            occurrence_idx_list = ticker_to_ma_20_occurrence_idx_list_dict[ticker]
+
+            for occurrence_idx in occurrence_idx_list:   
+                if not occurrence_idx:
+                    continue
+        
+                us_current_datetime = datetime.datetime.now().astimezone(pytz.timezone('US/Eastern'))
+                current_datetime_and_ramp_up_time_diff = int(((us_current_datetime.replace(tzinfo=None) - datetime.datetime.strptime(occurrence_idx, '%Y-%m-%d %H:%M:%S')).total_seconds()) / 60)
                 
-                datetime_idx_df = derive_idx_df(above_ma_df, numeric_idx=False)
-                ramp_up_datetime_idx_df = datetime_idx_df.where(above_ma_df.values).ffill().iloc[[-1]]
-                ramp_up_close_df = close_df.where(above_ma_df.values).ffill().iloc[[-1]]
-                ramp_up_close_pct_df = close_pct_df.where(above_ma_df.values).ffill().iloc[[-1]]
-                ramp_up_previous_close_df = previous_close_df.where(above_ma_df.values).ffill().iloc[[-1]]
-                ramp_up_previous_close_pct_df = previous_close_pct_df.where(above_ma_df.values).ffill().iloc[[-1]]
-                ramp_up_volume_df = volume_df.where(above_ma_df.values).ffill().iloc[[-1]]
-                ramp_up_total_volume_df = total_volume_df.where(above_ma_df.values).ffill().iloc[[-1]]
-                ramp_up_ma_vol_df = ma_vol_df.where(above_ma_df.values).ffill().iloc[[-1]]
-                
-                for ticker in ticker_list:
-                    display_close = ramp_up_close_df.loc[:, ticker].iat[0, 0]
-                    volume = ramp_up_volume_df.loc[:, ticker].iat[0, 0]
-                    display_volume = "{:,}".format(volume)
-                    display_total_volume = "{:,}".format(ramp_up_total_volume_df.loc[:, ticker].iat[0, 0])
-                    display_close_pct = round(ramp_up_close_pct_df.loc[:, ticker].iat[0, 0], 2)
-                    display_ma_vol = ramp_up_ma_vol_df.loc[:, ticker].iat[0, 0]
-                    display_previous_close = ramp_up_previous_close_df.loc[:, ticker].iat[0, 0]
-                    display_previous_close_pct = round(ramp_up_previous_close_pct_df.loc[:, ticker].iat[0, 0], 2)
-                
-                    ramp_up_datetime = ramp_up_datetime_idx_df.loc[:, ticker].iat[0, 0]
-                    ramp_up_hour = pd.to_datetime(ramp_up_datetime).hour
-                    ramp_up_minute = pd.to_datetime(ramp_up_datetime).minute
-                    display_hour = ('0' + str(ramp_up_hour)) if ramp_up_hour < 10 else ramp_up_hour
-                    display_minute = ('0' + str(ramp_up_minute)) if ramp_up_minute < 10 else ramp_up_minute
-                    display_time_str = f'{display_hour}:{display_minute}'
-                    read_time_str = f'{ramp_up_hour} {ramp_up_minute}' if (ramp_up_minute > 0) else f'{ramp_up_hour} o clock' 
-                    read_ticker_str = " ".join(ticker)
-                
-                    logger.log_debug_msg(f'{ticker} ramp up {display_close_pct}% above {ma_val}MA volume at {display_time_str}, {ma_val}MA volume: {display_ma_vol}, Volume: {display_volume}, Total volume: {display_total_volume}, Volume ratio: {round((float(volume)/ display_ma_vol), 1)}, Close: ${display_close}, Previous close: {display_previous_close}, Previous close change: {display_previous_close_pct}%', with_std_out = True)
-                    logger.log_debug_msg(f'{read_ticker_str} ramp up {display_close_pct} percent above {ma_val} M A volume at {read_time_str}, Ratio: {round((float(volume)/ display_ma_vol), 1)}', with_speech = True, with_log_file = False)
+                if current_datetime_and_ramp_up_time_diff <= HIT_SCANNER_VALID_PERIOD_IN_MIN:
+                    record_exist_result = execute_in_transaction("""SELECT COUNT(*) AS ct FROM PATTERN_ANALYSIS 
+                                                      WHERE TICKER = ? 
+                                                      AND HIT_SCANNER_DATETIME = ? 
+                                                      AND SCAN_PATTERN = ? 
+                                                      AND BAR_SIZE = ?""",
+                                                    (ticker, occurrence_idx, 'SMALL_CAP_RAMP_UP', '1min'))
+                    record_count = dict(record_exist_result[0])['ct']
                     
-    logger.log_debug_msg(f'Unusual volume analysis time: {time.time() - start_time} seconds')
+                    notify = (record_count == 0)
+                    
+                    if notify:
+                        close = float(minute_df.loc[occurrence_idx, (ticker, 'Close')])
+                        close_pct = float(minute_df.loc[occurrence_idx, (ticker, 'Close Change%')])
+                        previous_close_pct = previous_close_pct_df.loc[occurrence_idx, (ticker, 'Volume')]
+                        volume = int(minute_df.loc[occurrence_idx, (ticker, 'Volume')])
+                        ma_20_volume = int(minute_df.loc[occurrence_idx, (ticker, '20MA Volume')])
+                        total_volume = int(minute_df.loc[occurrence_idx, (ticker, 'Total Volume')])
+                        
+                        #debug [-1] -> [0] 
+                        yesterday_close = float(previous_day_df.loc[previous_day_df.index[-1], (ticker, 'Close')])
+                        
+                        hit_scanner_datetime_display = convert_into_human_readable_time(occurrence_idx)
+                        read_out_pop_up_time = convert_into_read_out_time(occurrence_idx)
+                        
+                        readout_message = f'{" ".join(ticker)} ramp up {round(close_pct, 2)}% at {read_out_pop_up_time}'
+                        display_message = f'{ticker} ramp up {round(close_pct, 2)}% at {hit_scanner_datetime_display}, close: {close}, previous close: {yesterday_close}, previous day percent change: {round(previous_close_pct, 2)}, volume: {volume:,.2f}, 20MA volume: {ma_20_volume}, total volume: {total_volume:,.2f}'
+                        ma_20_ramp_up_readout_message_list.append(readout_message)
+                        ma_20_ramp_up_display_message_list.append(display_message)
+                        ma_20_ramp_up_save_db_params_list.append((ticker, occurrence_idx))
+                        print(f'${ticker} small cap ramp up, hit scanner datetime: {occurrence_idx}')
+                                          
+    if len(above_vol_50_ma_ticker_list) > 0:
+        ma_50_ramp_up_readout_message_list = []
+        ma_50_ramp_up_display_message_list = []
+        ma_50_ramp_up_save_db_params_list = []
+        
+        for ticker in above_vol_50_ma_ticker_list:
+            occurrence_idx_list = ticker_to_ma_50_occurrence_idx_list_dict[ticker]
+
+            for occurrence_idx in occurrence_idx_list:   
+                if not occurrence_idx:
+                    continue
+        
+                us_current_datetime = datetime.datetime.now().astimezone(pytz.timezone('US/Eastern'))
+                current_datetime_and_ramp_up_time_diff = int(((us_current_datetime.replace(tzinfo=None) - datetime.datetime.strptime(occurrence_idx, '%Y-%m-%d %H:%M:%S')).total_seconds()) / 60)
+                
+                if current_datetime_and_ramp_up_time_diff <= HIT_SCANNER_VALID_PERIOD_IN_MIN:
+                    record_exist_result = execute_in_transaction("""SELECT COUNT(*) AS ct FROM PATTERN_ANALYSIS 
+                                                      WHERE TICKER = ? 
+                                                      AND HIT_SCANNER_DATETIME = ? 
+                                                      AND SCAN_PATTERN = ? 
+                                                      AND BAR_SIZE = ?""",
+                                                    (ticker, occurrence_idx, 'SMALL_CAP_RAMP_UP', '1min'))
+                    record_count = dict(record_exist_result[0])['ct']
+                    
+                    notify = (record_count == 0)
+                    
+                    if notify:
+                        close = float(minute_df.loc[occurrence_idx, (ticker, 'Close')])
+                        close_pct = float(minute_df.loc[occurrence_idx, (ticker, 'Close Change%')])
+                        previous_close_pct = previous_close_pct_df.loc[occurrence_idx, (ticker, 'Volume')]
+                        volume = int(minute_df.loc[occurrence_idx, (ticker, 'Volume')])
+                        ma_50_volume = int(minute_df.loc[occurrence_idx, (ticker, '50MA Volume')])
+                        total_volume = int(minute_df.loc[occurrence_idx, (ticker, 'Total Volume')])
+                        
+                        #debug [-1] -> [0] 
+                        yesterday_close = float(previous_day_df.loc[previous_day_df.index[-1], (ticker, 'Close')])
+                        
+                        hit_scanner_datetime_display = convert_into_human_readable_time(occurrence_idx)
+                        read_out_pop_up_time = convert_into_read_out_time(occurrence_idx)
+                        
+                        readout_message = f'{" ".join(ticker)} ramp up {round(close_pct, 2)}% at {read_out_pop_up_time}'
+                        display_message = f'{ticker} ramp up {round(close_pct, 2)}% at {hit_scanner_datetime_display}, close: {close}, previous close: {yesterday_close}, previous day percent change: {round(previous_close_pct, 2)}, volume: {volume:,.2f}, 50MA volume: {ma_50_volume}, total volume: {total_volume:,.2f}'
+                        ma_50_ramp_up_readout_message_list.append(readout_message)
+                        ma_50_ramp_up_display_message_list.append(display_message)
+                        ma_50_ramp_up_save_db_params_list.append((ticker, occurrence_idx))
+                        print(f'${ticker} small cap ramp up, hit scanner datetime: {occurrence_idx}')
+        
+    print(f'Small cap ramp up analyse time: {time.time() - analyse_start_time} seconds')
+    

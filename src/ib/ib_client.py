@@ -8,9 +8,11 @@ import pytz
 
 from discord.discord_client import send_message, MAIN_BOT
 from exception.connection_exception import ConnectionException
-from utils.dataframe_util import append_customised_indicator
 
+from utils.dataframe_util import append_customised_indicator
 from utils.logger import Logger
+
+from pattern.small_cap_pop import analyse_small_cap_pop
 
 logger = Logger()
 
@@ -112,13 +114,13 @@ class IBClient(EClient, EWrapper):
                 ticker_minute_df_list.append(single_ticker_minute_df)
             
             complete_minute_df = pd.concat(ticker_minute_df_list, axis=1)
-            
-            with pd.option_context('display.max_rows', None,
-                                       'display.max_columns', None,
-                                    'display.precision', 3):
-                logger.log_debug_msg(complete_minute_df)
-            
             complete_minute_df = append_customised_indicator(complete_minute_df)
+            
+            #debug
+            # with pd.option_context('display.max_rows', None,
+            #                            'display.max_columns', None,
+            #                         'display.precision', 3):
+            #     logger.log_debug_msg(complete_minute_df)
             
             for ticker, daily_df_dict in self.small_cap_pop_previous_day_df_dict.items():
                 daily_df_list = []
@@ -130,15 +132,15 @@ class IBClient(EClient, EWrapper):
                 ticker_daily_df_list.append(single_ticker_candle_df)
             
             complete_daily_df = pd.concat(ticker_daily_df_list, axis=1)
-            
-            with pd.option_context('display.max_rows', None,
-                                       'display.max_columns', None,
-                                    'display.precision', 3):
-                logger.log_debug_msg(complete_daily_df)
-            
             complete_daily_df = append_customised_indicator(complete_daily_df)
             
+            analyse_small_cap_pop(complete_minute_df, complete_daily_df)
             print()
+            #debug
+            # with pd.option_context('display.max_rows', None,
+            #                            'display.max_columns', None,
+            #                         'display.precision', 3):
+            #     logger.log_debug_msg(complete_daily_df)
     
     def scannerDataEnd(self, reqId):
         # Small cap pop scan
@@ -147,7 +149,8 @@ class IBClient(EClient, EWrapper):
             us_current_datetime = datetime.datetime.now().astimezone(pytz.timezone('US/Eastern'))
             premarket_start_time = us_current_datetime.replace(hour=4, minute=0, second=0)
             timeframe_interval = int(((us_current_datetime - premarket_start_time).total_seconds()) / 60)
-            
+            #debug
+            #timeframe_interval = 540
             if timeframe_interval < 1:
                 print('Timeframe interval less than 1 minute')
                 return
@@ -157,4 +160,3 @@ class IBClient(EClient, EWrapper):
             for rank, contract in enumerate(self.small_cap_pop_contract_list):
                 self.reqHistoricalData((100 + rank), contract, '', f'{str(int(timeframe_interval * 60))} S', '1 min', 'TRADES', 0, 1, False, [])
                 self.reqHistoricalData((200 + rank), contract, '', '2 D', '1 day', 'TRADES', 1, 1, False, [])
-

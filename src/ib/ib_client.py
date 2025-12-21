@@ -13,6 +13,8 @@ from utils.dataframe_util import append_customised_indicator
 from utils.logger import Logger
 
 from pattern.small_cap_pop import analyse_small_cap_pop
+from pattern.small_cap_ramp_up import analyse_small_cap_ramp_up
+from pattern.yesterday_bullish_daily_candle import analyse_yesterday_bullish_daily_candle
 
 logger = Logger()
 
@@ -20,6 +22,9 @@ class IBClient(EClient, EWrapper):
     small_cap_pop_contract_list = []
     small_cap_pop_df_dict = {}
     small_cap_pop_previous_day_df_dict = {}
+    nq_futures_df_dict = {}
+    es_futures_df_dict = {}
+    ym_futures_df_dict = {}
     
     def __init__(self):
         EClient.__init__(self, self)
@@ -96,10 +101,21 @@ class IBClient(EClient, EWrapper):
             ticker_to_indicator_column = pd.MultiIndex.from_product([[ticker], ['Open', 'High', 'Low', 'Close', 'Volume']])
             single_ticker_candle_df = pd.DataFrame(ohlcv_list, columns=ticker_to_indicator_column, index=[formated_dt])
             self.small_cap_pop_previous_day_df_dict[ticker][formated_dt] = single_ticker_candle_df
+        
+        if 10000 <= reqId < 20000:
+            formated_dt = datetime.datetime.strptime(dt, '%Y%m%d %H:%M:%S').strftime('%Y-%m-%d %H:%M:%S')
+            
+            ohlcv_list = []
+            ohlcv_list.append([open, high, low, close, volume])
+            ticker_to_indicator_column = pd.MultiIndex.from_product([['NQ'], ['Open', 'High', 'Low', 'Close', 'Volume']])
+            single_ticker_candle_df = pd.DataFrame(ohlcv_list, columns=ticker_to_indicator_column, index=[formated_dt])
+            self.nq_futures_df_dict[formated_dt] = single_ticker_candle_df 
             
     #Marks the ending of historical bars reception.
     def historicalDataEnd(self, reqId: int, start: str, end: str):
-        if (len(self.small_cap_pop_df_dict) == len(self.small_cap_pop_contract_list)
+        if (self.small_cap_pop_df_dict 
+                and self.small_cap_pop_contract_list
+                and len(self.small_cap_pop_df_dict) == len(self.small_cap_pop_contract_list)
                 and len(self.small_cap_pop_previous_day_df_dict) == len(self.small_cap_pop_contract_list)):
             ticker_minute_df_list = []
             ticker_daily_df_list= []
@@ -137,11 +153,16 @@ class IBClient(EClient, EWrapper):
             print(f'completed minute df first index: {complete_minute_df.index.tolist()[0]}, last index: {complete_minute_df.index.tolist()[-1]}')
             print(f'completed daily df indice: {complete_daily_df.index.tolist()}')
             analyse_small_cap_pop(complete_minute_df, complete_daily_df)
+            analyse_small_cap_ramp_up(complete_minute_df, complete_daily_df)
+            analyse_yesterday_bullish_daily_candle(complete_minute_df, complete_daily_df)
             #debug
             # with pd.option_context('display.max_rows', None,
             #                            'display.max_columns', None,
             #                         'display.precision', 3):
             #     logger.log_debug_msg(complete_daily_df)
+            
+        if 10000 <= reqId < 20000:
+            print()
     
     def scannerDataEnd(self, reqId):
         # Small cap pop scan

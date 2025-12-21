@@ -29,7 +29,7 @@ def analyse_small_cap_ramp_up(minute_df, daily_df):
     previous_close_df = previous_day_df.loc[:, idx[:, 'Close']] 
     previous_close_pct_df = (((minute_df.loc[:, idx[:, 'Close']].sub(previous_close_df.values))
                                                                 .div(previous_close_df.values))
-                                                                .mul(100))
+                                                                .mul(100)).rename(columns={'Close': 'Close Change%'})
     
     candle_colour_df = minute_df.loc[:, idx[:, 'Candle Colour']].rename(columns={'Candle Colour': 'Compare'})
     marubozu_ratio_df = minute_df.loc[:, idx[:, 'Marubozu Ratio']].rename(columns={'Marubozu Ratio': 'Compare'})
@@ -86,7 +86,7 @@ def analyse_small_cap_ramp_up(minute_df, daily_df):
                     if notify:
                         close = float(minute_df.loc[occurrence_idx, (ticker, 'Close')])
                         close_pct = float(minute_df.loc[occurrence_idx, (ticker, 'Close Change%')])
-                        previous_close_pct = previous_close_pct_df.loc[occurrence_idx, (ticker, 'Volume')]
+                        previous_close_pct = previous_close_pct_df.loc[occurrence_idx, (ticker, 'Close Change%')]
                         volume = int(minute_df.loc[occurrence_idx, (ticker, 'Volume')])
                         ma_50_volume = int(minute_df.loc[occurrence_idx, (ticker, '50MA Volume')])
                         total_volume = int(minute_df.loc[occurrence_idx, (ticker, 'Total Volume')])
@@ -148,7 +148,7 @@ def analyse_small_cap_ramp_up(minute_df, daily_df):
                     if notify:
                         close = float(minute_df.loc[occurrence_idx, (ticker, 'Close')])
                         close_pct = float(minute_df.loc[occurrence_idx, (ticker, 'Close Change%')])
-                        previous_close_pct = previous_close_pct_df.loc[occurrence_idx, (ticker, 'Volume')]
+                        previous_close_pct = previous_close_pct_df.loc[occurrence_idx, (ticker, 'Close Change%')]
                         volume = int(minute_df.loc[occurrence_idx, (ticker, 'Volume')])
                         ma_20_volume = int(minute_df.loc[occurrence_idx, (ticker, '20MA Volume')])
                         total_volume = int(minute_df.loc[occurrence_idx, (ticker, 'Total Volume')])

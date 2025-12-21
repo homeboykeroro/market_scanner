@@ -91,7 +91,7 @@ def analyse_small_cap_pop(minute_df, daily_df) -> None:
                                                     (ticker, occurrence_idx, 'SMALL_CAP_POP', '1min'))
                     record_count = dict(record_exist_result[0])['ct']
                     
-                    notify = (pop_occurrence <= MAX_POP_OCCURRENCE) & (record_count == 0)
+                    notify = (pop_occurrence <= MAX_POP_OCCURRENCE) and (record_count == 0)
                     
                     if notify:
                         close = float(minute_df.loc[occurrence_idx, (ticker, 'Close')])

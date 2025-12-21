@@ -38,6 +38,7 @@ def small_cap_pop_filter():
     scanner_filter.locationCode = 'STK.US.MAJOR'
     scanner_filter.numberOfRows = 10
     scanner_filter.abovePrice = 1
+    scanner_filter.aboveVolume = 1000
     scanner_filter.marketCapAbove = 0
     scanner_filter.marketCapBelow = 500000000.0
     

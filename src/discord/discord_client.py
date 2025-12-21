@@ -7,15 +7,18 @@ tts = TextToSpeechEngine()
 
 MAIN_BOT = 'CHATBOT'
 SMALL_CAP_POP = 'SMALL CAP POP'
+SMALL_CAP_RAMP_UP = 'SMALL CAP RAMP UP'
 
 channel_to_url_dict = {
     MAIN_BOT: get_config('SMALL_CAP_POP', 'BOT_TOKEN'),
-    SMALL_CAP_POP: get_config('SMALL_CAP_POP', 'BOT_TOKEN')
+    SMALL_CAP_POP: get_config('SMALL_CAP_POP', 'BOT_TOKEN'),
+    SMALL_CAP_RAMP_UP: get_config('SMALL_CAP_POP', 'BOT_TOKEN')
 }
 
 channel_to_bot_name_dict = {
     MAIN_BOT: 'chatbot',
-    SMALL_CAP_POP: 'pop scanner'
+    SMALL_CAP_POP: 'pop scanner',
+    SMALL_CAP_RAMP_UP: 'pop scanner'
 }
 
 def send_message(channel, message, tts=False):

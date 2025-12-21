@@ -134,8 +134,9 @@ class IBClient(EClient, EWrapper):
             complete_daily_df = pd.concat(ticker_daily_df_list, axis=1)
             complete_daily_df = append_customised_indicator(complete_daily_df)
             
+            print(f'completed minute df first index: {complete_minute_df.index.tolist()[0]}, last index: {complete_minute_df.index.tolist()[-1]}')
+            print(f'completed daily df indice: {complete_daily_df.index.tolist()}')
             analyse_small_cap_pop(complete_minute_df, complete_daily_df)
-            print()
             #debug
             # with pd.option_context('display.max_rows', None,
             #                            'display.max_columns', None,

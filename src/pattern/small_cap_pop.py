@@ -27,7 +27,7 @@ def analyse_small_cap_pop(minute_df, daily_df) -> None:
     #debug [-1] -> [0] 
     #get_previous_close_idx = 
     us_current_datetime = datetime.datetime.now().astimezone(pytz.timezone('US/Eastern'))
-    previous_day_df = daily_df.iloc[[0]] if us_current_datetime.time() < datetime.time(20, 0, 0) else daily_df.iloc[[-1]]
+    previous_day_df = daily_df.iloc[[0]] if us_current_datetime.time() < datetime.time(16, 0, 0) else daily_df.iloc[[-1]]
     print(f'Analyse small cap pop previous day value: {previous_day_df.iloc[[0]].index[-1]}')
     
     previous_close_pct_df = (((minute_df.loc[:, idx[:, 'Close']].sub(previous_day_df.loc[:, idx[:, 'Close']].values))

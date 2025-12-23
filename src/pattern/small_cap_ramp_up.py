@@ -43,7 +43,7 @@ def analyse_small_cap_ramp_up(minute_df, daily_df):
     vol_20_ma_df = minute_df.loc[:, idx[:, '20MA Volume']].rename(columns={'20MA Volume': 'Compare'})
     vol_50_ma_df = minute_df.loc[:, idx[:, '50MA Volume']].rename(columns={'50MA Volume': 'Compare'})
     
-    green_candle_df = (candle_colour_df == 'GREEN')
+    green_candle_df = (candle_colour_df == 'Green')
     marubozu_boolean_df = (marubozu_ratio_df >= MIN_MARUBOZU_RATIO)
     candle_close_pct_boolean_df = (close_pct_df >= MIN_CLOSE_PCT)
     above_vol_20_ma_boolean_df = (volume_df >= vol_20_ma_df) & (vol_20_ma_df >= MIN_MA_VOLUME)

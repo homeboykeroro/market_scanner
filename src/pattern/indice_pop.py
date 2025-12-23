@@ -15,7 +15,7 @@ from database.sqlite_connector import execute_in_transaction
 idx = pd.IndexSlice
 logger = Logger()
  
-MIN_INDEX_CLOSE_PCT = 0.1
+MIN_INDEX_CLOSE_PCT = 0.03
 INDEX_TOP_N_VOLUME = 10
 MIN_MARUBOZU_RATIO = 40
 
@@ -35,7 +35,7 @@ def analyse_index_pop(minute_df, daily_df, index) -> None:
     print(f'Analyse {index} index pop previous day value: {previous_day_df.iloc[[0]].index[-1]}')
     
     #ramp up (>20ma, >50ma, top 10 volume)
-    green_candle_df = (candle_colour_df == 'GREEN')
+    green_candle_df = (candle_colour_df == 'Green')
     marubozu_boolean_df = (marubozu_ratio_df >= MIN_MARUBOZU_RATIO)
     min_pct_boolean_df = (close_pct_df >= MIN_INDEX_CLOSE_PCT)
     
@@ -44,14 +44,14 @@ def analyse_index_pop(minute_df, daily_df, index) -> None:
     vol_50_ma_df = minute_df.loc[:, idx[:, '50MA Volume']].rename(columns={'50MA Volume': 'Compare'})
     above_vol_20_ma_boolean_df = (volume_df >= vol_20_ma_df)
     above_vol_50_ma_boolean_df = (volume_df >= vol_50_ma_df)
-    index_top_n_volume_np = np.sort(volume_df.to_numpy(), axis=0)[::-1][:INDEX_TOP_N_VOLUME, :]  
+    index_top_n_volume_np = np.sort(volume_df.astype(int, errors = 'raise').to_numpy(), axis=0)[::-1][:INDEX_TOP_N_VOLUME, :]  
     is_in_index_top_n_volume = volume_df >= index_top_n_volume_np.min(axis=0)
     top_10_volume_boolean_df = pd.DataFrame(is_in_index_top_n_volume, 
-                                            index=volume.index, 
+                                            index=volume_df.index, 
                                             columns=volume_df.columns)
     
     index_ramp_up_boolean_df = (green_candle_df) & (marubozu_boolean_df) & (min_pct_boolean_df) & (above_vol_20_ma_boolean_df | above_vol_50_ma_boolean_df | top_10_volume_boolean_df)
-    
+
     ticker_to_ramp_up_occurrence_idx_list_dict = get_ticker_to_occurrence_idx_list(index_ramp_up_boolean_df)
     
     index_ramp_up_result_series = index_ramp_up_boolean_df.any()   
@@ -62,7 +62,7 @@ def analyse_index_pop(minute_df, daily_df, index) -> None:
         display_message_list = []
         save_db_params_list = []
         
-        for ticker in index_close_pct_ticker_list:
+        for ticker in index_ramp_up_ticker_list:
             occurrence_idx_list = ticker_to_ramp_up_occurrence_idx_list_dict[ticker]
 
             for occurrence_idx in occurrence_idx_list:   
@@ -74,7 +74,7 @@ def analyse_index_pop(minute_df, daily_df, index) -> None:
                                                               AND HIT_SCANNER_DATETIME = ? 
                                                               AND SCAN_PATTERN = ? 
                                                               AND BAR_SIZE = ?""",
-                                                            (ticker, occurrence_idx, f'{index}_RAMP_POP', '1min'))
+                                                            (ticker, occurrence_idx, f'{index}_RAMP_UP', '1min'))
                 record_count = dict(record_exist_result[0])['ct']
                     
                 notify = (record_count == 0)
@@ -115,11 +115,11 @@ def analyse_index_pop(minute_df, daily_df, index) -> None:
                 execute_in_transaction("""INSERT INTO PATTERN_ANALYSIS 
                                         (TICKER, HIT_SCANNER_DATETIME, SCAN_PATTERN, BAR_SIZE) 
                                         VALUES (?, ?, ?, ?)""",
-                                        (save_ticker, save_hit_scanner_datetime, f'{index}_RAMP_POP', '1min'))
+                                        (save_ticker, save_hit_scanner_datetime, f'{index}_RAMP_UP', '1min'))
         print(f'{index} close pct pop send message time: {time.time() - send_message_time} seconds')
     
     #close percent change notification
-    natural_number_close_pct_df = close_pct_df.astype(int, errors = 'raise')
+    natural_number_close_pct_df = close_pct_df.fillna(0).astype(int, errors = 'raise')
     natural_number_close_pct_df = natural_number_close_pct_df.where((natural_number_close_pct_df > 0).values)
     natural_number_close_pct_df = natural_number_close_pct_df.ffill()
     shifted_natural_number_close_pct_df = natural_number_close_pct_df.shift(1)

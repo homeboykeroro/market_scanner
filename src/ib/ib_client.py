@@ -232,17 +232,17 @@ class IBClient(EClient, EWrapper):
             complete_nq_daily_df = append_customised_indicator(concat_nq_daily_df)
             analyse_index_pop(complete_nq_minute_df, complete_nq_daily_df, 'NQ')
             
-            #debug
-            with pd.option_context('display.max_rows', None,
-                                       'display.max_columns', None,
-                                    'display.precision', 3):
-                logger.log_debug_msg(complete_nq_minute_df)
+            # #debug
+            # with pd.option_context('display.max_rows', None,
+            #                            'display.max_columns', None,
+            #                         'display.precision', 3):
+            #     logger.log_debug_msg(complete_nq_minute_df)
             
-            #debug
-            with pd.option_context('display.max_rows', None,
-                                       'display.max_columns', None,
-                                    'display.precision', 3):
-                logger.log_debug_msg(complete_nq_daily_df)
+            # #debug
+            # with pd.option_context('display.max_rows', None,
+            #                            'display.max_columns', None,
+            #                         'display.precision', 3):
+            #     logger.log_debug_msg(complete_nq_daily_df)
             
         if self.es_futures_df_dict and self.es_futures_previous_day_df_dict:
             es_minute_df_list = []
@@ -261,17 +261,17 @@ class IBClient(EClient, EWrapper):
             complete_es_daily_df = append_customised_indicator(concat_es_daily_df)
             analyse_index_pop(complete_es_minute_df, complete_es_daily_df, 'ES')
             
-            #debug
-            with pd.option_context('display.max_rows', None,
-                                       'display.max_columns', None,
-                                    'display.precision', 3):
-                logger.log_debug_msg(complete_es_minute_df)
+            # #debug
+            # with pd.option_context('display.max_rows', None,
+            #                            'display.max_columns', None,
+            #                         'display.precision', 3):
+            #     logger.log_debug_msg(complete_es_minute_df)
             
-            #debug
-            with pd.option_context('display.max_rows', None,
-                                       'display.max_columns', None,
-                                    'display.precision', 3):
-                logger.log_debug_msg(complete_es_daily_df)
+            # #debug
+            # with pd.option_context('display.max_rows', None,
+            #                            'display.max_columns', None,
+            #                         'display.precision', 3):
+            #     logger.log_debug_msg(complete_es_daily_df)
                 
         if self.ym_futures_df_dict and self.ym_futures_previous_day_df_dict:
             ym_minute_df_list = []
@@ -290,17 +290,17 @@ class IBClient(EClient, EWrapper):
             complete_ym_daily_df = append_customised_indicator(concat_ym_daily_df)
             analyse_index_pop(complete_ym_minute_df, complete_ym_daily_df, 'YM')
             
-            #debug
-            with pd.option_context('display.max_rows', None,
-                                       'display.max_columns', None,
-                                    'display.precision', 3):
-                logger.log_debug_msg(complete_ym_minute_df)
+            # #debug
+            # with pd.option_context('display.max_rows', None,
+            #                            'display.max_columns', None,
+            #                         'display.precision', 3):
+            #     logger.log_debug_msg(complete_ym_minute_df)
             
-            #debug
-            with pd.option_context('display.max_rows', None,
-                                       'display.max_columns', None,
-                                    'display.precision', 3):
-                logger.log_debug_msg(complete_ym_daily_df)
+            # #debug
+            # with pd.option_context('display.max_rows', None,
+            #                            'display.max_columns', None,
+            #                         'display.precision', 3):
+            #     logger.log_debug_msg(complete_ym_daily_df)
             
     def scannerDataEnd(self, reqId):
         # Small cap pop scan
@@ -336,9 +336,9 @@ class IBClient(EClient, EWrapper):
             ym_contract.secType = "CONTFUT"
             ym_contract.exchange = "CME"
     
-            self.reqHistoricalData(10000, nq_contract, '', f'600 S', '1 min', 'TRADES', 0, 1, False, [])
+            self.reqHistoricalData(10000, nq_contract, '', f'{str(int(timeframe_interval * 60))} S', '1 min', 'TRADES', 0, 1, False, [])
             self.reqHistoricalData(11000, nq_contract, '', '2 D', '1 day', 'TRADES', 1, 1, False, [])
-            self.reqHistoricalData(20000, nq_contract, '', f'600 S', '1 min', 'TRADES', 0, 1, False, [])
+            self.reqHistoricalData(20000, nq_contract, '', f'{str(int(timeframe_interval * 60))} S', '1 min', 'TRADES', 0, 1, False, [])
             self.reqHistoricalData(21000, nq_contract, '', '2 D', '1 day', 'TRADES', 1, 1, False, [])
-            self.reqHistoricalData(30000, nq_contract, '', f'600 S', '1 min', 'TRADES', 0, 1, False, [])
+            self.reqHistoricalData(30000, nq_contract, '', f'{str(int(timeframe_interval * 60))} S', '1 min', 'TRADES', 0, 1, False, [])
             self.reqHistoricalData(31000, nq_contract, '', '2 D', '1 day', 'TRADES', 1, 1, False, [])

@@ -1,9 +1,11 @@
 import requests
 
+from utils.logger import Logger
 from utils.config_util import get_config
 from utils.offline_tts import TextToSpeechEngine
 
-tts = TextToSpeechEngine()
+logger = Logger()
+text_to_speech_engine = TextToSpeechEngine()
 
 MAIN_BOT = 'CHATBOT'
 SMALL_CAP_POP = 'SMALL CAP POP'
@@ -31,13 +33,17 @@ def send_message(channel, message, tts=False):
     url = channel_to_url_dict[channel]
     
     if channel not in channel_to_url_dict:
-        tts.speak(f'Cannot find channel type of {channel}')
+        print(f'Cannot find channel type of {channel}')
+        logger.log_debug_msg(f'Cannot find channel type of {channel}')
+        text_to_speech_engine.speak(f'Cannot find channel type of {channel}')
         return
     
     headers = {"Content-Type": "application/json"}
     data = {"content": message, "username": channel_to_bot_name_dict[channel], "tts": tts}
     res = requests.post(url, headers=headers, json=data)
     if res.status_code not in (200, 204):
-        tts.speak(f'Failed to send message to discord channe, channel type: {channel}')
+        print(f'Failed to send message to discord channe, channel type: {channel}')
+        logger.log_debug_msg(f'Failed to send message to discord channe, channel type: {channel}')
+        text_to_speech_engine.speak(f'Failed to send message to discord channe, channel type: {channel}')
 
 

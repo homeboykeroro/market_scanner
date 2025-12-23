@@ -27,7 +27,12 @@ def analyse_small_cap_pop(minute_df, daily_df) -> None:
     #debug [-1] -> [0] 
     #get_previous_close_idx = 
     us_current_datetime = datetime.datetime.now().astimezone(pytz.timezone('US/Eastern'))
-    previous_day_df = daily_df.iloc[[0]] if us_current_datetime.time() < datetime.time(16, 0, 0) else daily_df.iloc[[-1]]
+    
+    if datetime.time(4, 0, 0) <= us_current_datetime.time() <= datetime.time(9, 30, 0):
+        previous_day_df = daily_df.iloc[[0]] 
+    if us_current_datetime.time() >= datetime.time(16, 0, 0):
+        previous_day_df = daily_df.iloc[[-1]]
+    
     print(f'Analyse small cap pop previous day value: {previous_day_df.iloc[[0]].index[-1]}')
     
     previous_close_pct_df = (((minute_df.loc[:, idx[:, 'Close']].sub(previous_day_df.loc[:, idx[:, 'Close']].values))
@@ -52,6 +57,8 @@ def analyse_small_cap_pop(minute_df, daily_df) -> None:
     pop_up_boolean_df = (candle_close_pct_boolean_df) & (previous_close_pct_boolean_df) & (gap_up_pct_boolean_df)
     
     ticker_to_occurrence_idx_list_dict = get_ticker_to_occurrence_idx_list(pop_up_boolean_df)
+    print(f'small cap pop dict {ticker_to_occurrence_idx_list_dict}')
+    logger.log_debug_msg(f'small cap pop dict {ticker_to_occurrence_idx_list_dict}')
     
     top_gainer_result_series = pop_up_boolean_df.any()   
     top_gainer_ticker_list = top_gainer_result_series.index[top_gainer_result_series].get_level_values(0).tolist()

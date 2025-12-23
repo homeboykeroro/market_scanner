@@ -22,7 +22,12 @@ def analyse_small_cap_ramp_up(minute_df, daily_df):
     analyse_start_time = time.time()
     
     us_current_datetime = datetime.datetime.now().astimezone(pytz.timezone('US/Eastern'))
-    previous_day_df = daily_df.iloc[[0]] if us_current_datetime.time() < datetime.time(16, 0, 0) else daily_df.iloc[[-1]]
+    
+    if datetime.time(4, 0, 0) <= us_current_datetime.time() <= datetime.time(9, 30, 0):
+        previous_day_df = daily_df.iloc[[0]] 
+    if us_current_datetime.time() >= datetime.time(16, 0, 0):
+        previous_day_df = daily_df.iloc[[-1]]
+    
     print(f'Analyse small cap pop ramp up previous day value: {previous_day_df.iloc[[0]].index[-1]}')
     
     close_pct_df = minute_df.loc[:, idx[:, 'Close Change%']].rename(columns={'Close Change%': 'Compare'})

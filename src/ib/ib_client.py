@@ -87,7 +87,7 @@ class IBClient(EClient, EWrapper):
             ticker_to_indicator_column = pd.MultiIndex.from_product([[ticker], ['Open', 'High', 'Low', 'Close', 'Volume']])
             single_ticker_candle_df = pd.DataFrame(ohlcv_list, columns=ticker_to_indicator_column, index=[formated_dt])
             self.small_cap_pop_df_dict[ticker][formated_dt] = single_ticker_candle_df
-            # print(f'fetch {ticker} {formated_dt}')
+            #print(f'fetch {ticker} {formated_dt}')
             
         if 200 <= reqId < 300:
             formated_dt = datetime.datetime.strptime(dt, '%Y%m%d').strftime('%Y-%m-%d')
@@ -133,10 +133,10 @@ class IBClient(EClient, EWrapper):
             complete_minute_df = append_customised_indicator(complete_minute_df)
             
             #debug
-            # with pd.option_context('display.max_rows', None,
-            #                            'display.max_columns', None,
-            #                         'display.precision', 3):
-            #     logger.log_debug_msg(complete_minute_df)
+            with pd.option_context('display.max_rows', None,
+                                       'display.max_columns', None,
+                                    'display.precision', 3):
+                logger.log_debug_msg(complete_minute_df)
             
             for ticker, daily_df_dict in self.small_cap_pop_previous_day_df_dict.items():
                 daily_df_list = []
@@ -155,11 +155,15 @@ class IBClient(EClient, EWrapper):
             analyse_small_cap_pop(complete_minute_df, complete_daily_df)
             analyse_small_cap_ramp_up(complete_minute_df, complete_daily_df)
             analyse_yesterday_bullish_daily_candle(complete_minute_df, complete_daily_df)
+            
+            self.small_cap_pop_contract_list = []
+            self.small_cap_pop_df_dict = {}
+            self.small_cap_pop_previous_day_df_dict = {}
             #debug
-            # with pd.option_context('display.max_rows', None,
-            #                            'display.max_columns', None,
-            #                         'display.precision', 3):
-            #     logger.log_debug_msg(complete_daily_df)
+            with pd.option_context('display.max_rows', None,
+                                       'display.max_columns', None,
+                                    'display.precision', 3):
+                logger.log_debug_msg(complete_daily_df)
             
         if 10000 <= reqId < 20000:
             print()

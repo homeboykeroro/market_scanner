@@ -5,7 +5,6 @@ from ib.ib_client import IBClient
 from ib.screener_filter import small_cap_pop_filter
 from discord.discord_client import MAIN_BOT, send_message
 from exception.connection_exception import ConnectionException
-from ibapi.contract import Contract
 
 def main():
     ib_client = None

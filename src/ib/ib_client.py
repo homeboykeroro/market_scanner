@@ -3,6 +3,7 @@ import datetime
 import re
 from ibapi.client import *
 from ibapi.wrapper import *
+from ibapi.contract import Contract
 import pandas as pd
 import pytz
 
@@ -15,6 +16,7 @@ from utils.logger import Logger
 from pattern.small_cap_pop import analyse_small_cap_pop
 from pattern.small_cap_ramp_up import analyse_small_cap_ramp_up
 from pattern.yesterday_bullish_daily_candle import analyse_yesterday_bullish_daily_candle
+from pattern.indice_pop import analyse_index_pop
 
 logger = Logger()
 
@@ -25,6 +27,9 @@ class IBClient(EClient, EWrapper):
     nq_futures_df_dict = {}
     es_futures_df_dict = {}
     ym_futures_df_dict = {}
+    nq_futures_previous_day_df_dict = {}
+    es_futures_previous_day_df_dict = {}
+    ym_futures_previous_day_df_dict = {}
     
     def __init__(self):
         EClient.__init__(self, self)
@@ -102,7 +107,7 @@ class IBClient(EClient, EWrapper):
             single_ticker_candle_df = pd.DataFrame(ohlcv_list, columns=ticker_to_indicator_column, index=[formated_dt])
             self.small_cap_pop_previous_day_df_dict[ticker][formated_dt] = single_ticker_candle_df
         
-        if 10000 <= reqId < 20000:
+        if reqId == 10000:
             formated_dt = datetime.datetime.strptime(dt, '%Y%m%d %H:%M:%S').strftime('%Y-%m-%d %H:%M:%S')
             
             ohlcv_list = []
@@ -110,6 +115,51 @@ class IBClient(EClient, EWrapper):
             ticker_to_indicator_column = pd.MultiIndex.from_product([['NQ'], ['Open', 'High', 'Low', 'Close', 'Volume']])
             single_ticker_candle_df = pd.DataFrame(ohlcv_list, columns=ticker_to_indicator_column, index=[formated_dt])
             self.nq_futures_df_dict[formated_dt] = single_ticker_candle_df 
+            
+        if reqId == 11000:
+            formated_dt = datetime.datetime.strptime(dt, '%Y%m%d').strftime('%Y-%m-%d')
+            
+            ohlcv_list = []
+            ohlcv_list.append([open, high, low, close, volume])
+            ticker_to_indicator_column = pd.MultiIndex.from_product([['NQ'], ['Open', 'High', 'Low', 'Close', 'Volume']])
+            single_ticker_candle_df = pd.DataFrame(ohlcv_list, columns=ticker_to_indicator_column, index=[formated_dt])
+            self.nq_futures_previous_day_df_dict[formated_dt] = single_ticker_candle_df
+            
+        if reqId == 20000:
+            formated_dt = datetime.datetime.strptime(dt, '%Y%m%d %H:%M:%S').strftime('%Y-%m-%d %H:%M:%S')
+            
+            ohlcv_list = []
+            ohlcv_list.append([open, high, low, close, volume])
+            ticker_to_indicator_column = pd.MultiIndex.from_product([['ES'], ['Open', 'High', 'Low', 'Close', 'Volume']])
+            single_ticker_candle_df = pd.DataFrame(ohlcv_list, columns=ticker_to_indicator_column, index=[formated_dt])
+            self.es_futures_df_dict[formated_dt] = single_ticker_candle_df 
+            
+        if reqId == 21000:
+            formated_dt = datetime.datetime.strptime(dt, '%Y%m%d').strftime('%Y-%m-%d')
+            
+            ohlcv_list = []
+            ohlcv_list.append([open, high, low, close, volume])
+            ticker_to_indicator_column = pd.MultiIndex.from_product([['ES'], ['Open', 'High', 'Low', 'Close', 'Volume']])
+            single_ticker_candle_df = pd.DataFrame(ohlcv_list, columns=ticker_to_indicator_column, index=[formated_dt])
+            self.es_futures_previous_day_df_dict[formated_dt] = single_ticker_candle_df
+            
+        if reqId == 30000:
+            formated_dt = datetime.datetime.strptime(dt, '%Y%m%d %H:%M:%S').strftime('%Y-%m-%d %H:%M:%S')
+            
+            ohlcv_list = []
+            ohlcv_list.append([open, high, low, close, volume])
+            ticker_to_indicator_column = pd.MultiIndex.from_product([['YM'], ['Open', 'High', 'Low', 'Close', 'Volume']])
+            single_ticker_candle_df = pd.DataFrame(ohlcv_list, columns=ticker_to_indicator_column, index=[formated_dt])
+            self.ym_futures_df_dict[formated_dt] = single_ticker_candle_df 
+            
+        if reqId == 31000:
+            formated_dt = datetime.datetime.strptime(dt, '%Y%m%d').strftime('%Y-%m-%d')
+            
+            ohlcv_list = []
+            ohlcv_list.append([open, high, low, close, volume])
+            ticker_to_indicator_column = pd.MultiIndex.from_product([['YM'], ['Open', 'High', 'Low', 'Close', 'Volume']])
+            single_ticker_candle_df = pd.DataFrame(ohlcv_list, columns=ticker_to_indicator_column, index=[formated_dt])
+            self.ym_futures_previous_day_df_dict[formated_dt] = single_ticker_candle_df
             
     #Marks the ending of historical bars reception.
     def historicalDataEnd(self, reqId: int, start: str, end: str):
@@ -165,9 +215,93 @@ class IBClient(EClient, EWrapper):
                                     'display.precision', 3):
                 logger.log_debug_msg(complete_daily_df)
             
-        if 10000 <= reqId < 20000:
-            print()
-    
+        if self.nq_futures_df_dict and self.nq_futures_previous_day_df_dict:
+            nq_minute_df_list = []
+            nq_daily_df_list = []
+            
+            for dt, nq_minute_df in self.nq_futures_df_dict.items():
+                nq_minute_df_list.append(nq_minute_df)
+            
+            concat_nq_minute_df = pd.concat(nq_minute_df_list, axis=0)
+            
+            for dt, nq_daily_df in self.nq_futures_previous_day_df_dict.items():
+                nq_daily_df_list.append(nq_daily_df)
+                
+            concat_nq_daily_df = pd.concat(nq_daily_df_list, axis=0)
+            complete_nq_minute_df = append_customised_indicator(concat_nq_minute_df)
+            complete_nq_daily_df = append_customised_indicator(concat_nq_daily_df)
+            analyse_index_pop(complete_nq_minute_df, complete_nq_daily_df, 'NQ')
+            
+            #debug
+            with pd.option_context('display.max_rows', None,
+                                       'display.max_columns', None,
+                                    'display.precision', 3):
+                logger.log_debug_msg(complete_nq_minute_df)
+            
+            #debug
+            with pd.option_context('display.max_rows', None,
+                                       'display.max_columns', None,
+                                    'display.precision', 3):
+                logger.log_debug_msg(complete_nq_daily_df)
+            
+        if self.es_futures_df_dict and self.es_futures_previous_day_df_dict:
+            es_minute_df_list = []
+            es_daily_df_list = []
+            
+            for dt, es_minute_df in self.es_futures_df_dict.items():
+                es_minute_df_list.append(es_minute_df)
+            
+            concat_es_minute_df = pd.concat(es_minute_df_list, axis=0)
+            
+            for dt, es_daily_df in self.es_futures_previous_day_df_dict.items():
+                es_daily_df_list.append(es_daily_df)
+                
+            concat_es_daily_df = pd.concat(es_daily_df_list, axis=0)
+            complete_es_minute_df = append_customised_indicator(concat_es_minute_df)
+            complete_es_daily_df = append_customised_indicator(concat_es_daily_df)
+            analyse_index_pop(complete_es_minute_df, complete_es_daily_df, 'ES')
+            
+            #debug
+            with pd.option_context('display.max_rows', None,
+                                       'display.max_columns', None,
+                                    'display.precision', 3):
+                logger.log_debug_msg(complete_es_minute_df)
+            
+            #debug
+            with pd.option_context('display.max_rows', None,
+                                       'display.max_columns', None,
+                                    'display.precision', 3):
+                logger.log_debug_msg(complete_es_daily_df)
+                
+        if self.ym_futures_df_dict and self.ym_futures_previous_day_df_dict:
+            ym_minute_df_list = []
+            ym_daily_df_list = []
+            
+            for dt, ym_minute_df in self.ym_futures_df_dict.items():
+                ym_minute_df_list.append(ym_minute_df)
+            
+            concat_ym_minute_df = pd.concat(ym_minute_df_list, axis=0)
+            
+            for dt, ym_daily_df in self.ym_futures_previous_day_df_dict.items():
+                ym_daily_df_list.append(ym_daily_df)
+                
+            concat_ym_daily_df = pd.concat(ym_daily_df_list, axis=0)
+            complete_ym_minute_df = append_customised_indicator(concat_ym_minute_df)
+            complete_ym_daily_df = append_customised_indicator(concat_ym_daily_df)
+            analyse_index_pop(complete_ym_minute_df, complete_ym_daily_df, 'YM')
+            
+            #debug
+            with pd.option_context('display.max_rows', None,
+                                       'display.max_columns', None,
+                                    'display.precision', 3):
+                logger.log_debug_msg(complete_ym_minute_df)
+            
+            #debug
+            with pd.option_context('display.max_rows', None,
+                                       'display.max_columns', None,
+                                    'display.precision', 3):
+                logger.log_debug_msg(complete_ym_daily_df)
+            
     def scannerDataEnd(self, reqId):
         # Small cap pop scan
         if reqId == 1:
@@ -186,3 +320,25 @@ class IBClient(EClient, EWrapper):
             for rank, contract in enumerate(self.small_cap_pop_contract_list):
                 self.reqHistoricalData((100 + rank), contract, '', f'{str(int(timeframe_interval * 60))} S', '1 min', 'TRADES', 0, 1, False, [])
                 self.reqHistoricalData((200 + rank), contract, '', '2 D', '1 day', 'TRADES', 1, 1, False, [])
+
+            nq_contract = Contract()
+            nq_contract.symbol = "NQ"
+            nq_contract.secType = "CONTFUT"
+            nq_contract.exchange = "CME"
+            
+            es_contract = Contract()
+            es_contract.symbol = "ES"
+            es_contract.secType = "CONTFUT"
+            es_contract.exchange = "CME"
+            
+            ym_contract = Contract()
+            ym_contract.symbol = "YM"
+            ym_contract.secType = "CONTFUT"
+            ym_contract.exchange = "CME"
+    
+            self.reqHistoricalData(10000, nq_contract, '', f'600 S', '1 min', 'TRADES', 0, 1, False, [])
+            self.reqHistoricalData(11000, nq_contract, '', '2 D', '1 day', 'TRADES', 1, 1, False, [])
+            self.reqHistoricalData(20000, nq_contract, '', f'600 S', '1 min', 'TRADES', 0, 1, False, [])
+            self.reqHistoricalData(21000, nq_contract, '', '2 D', '1 day', 'TRADES', 1, 1, False, [])
+            self.reqHistoricalData(30000, nq_contract, '', f'600 S', '1 min', 'TRADES', 0, 1, False, [])
+            self.reqHistoricalData(31000, nq_contract, '', '2 D', '1 day', 'TRADES', 1, 1, False, [])

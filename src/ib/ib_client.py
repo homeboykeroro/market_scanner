@@ -318,13 +318,22 @@ class IBClient(EClient, EWrapper):
             #                            'display.max_columns', None,
             #                         'display.precision', 3):
             #     logger.log_debug_msg(complete_ym_daily_df)
+        small_cap_pop_minute_df_size = 0
+        small_cap_pop_daily_df_size = 0
+        
+        if self.small_cap_pop_minute_df is not None and not self.small_cap_pop_minute_df.empty:
+            small_cap_pop_minute_df_size = len(list(set(self.small_cap_pop_minute_df.columns.get_level_values(0).tolist())))
+        if self.small_cap_pop_daily_df is not None and not self.small_cap_pop_daily_df.empty:
+            small_cap_pop_daily_df_size = len(list(set(self.small_cap_pop_daily_df.columns.get_level_values(0).tolist())))
         
         if (
              (((self.small_cap_pop_minute_df is not None and not self.small_cap_pop_minute_df.empty) and
                 (self.small_cap_pop_daily_df is not None and not self.small_cap_pop_daily_df.empty) and 
-                len(self.small_cap_pop_contract_list) > 0)
+                len(self.small_cap_pop_contract_list) > 0 
+                and len(self.small_cap_pop_contract_list) == small_cap_pop_minute_df_size
+                and len(self.small_cap_pop_contract_list) == small_cap_pop_daily_df_size)
                  or 
-                    (len(self.small_cap_pop_contract_list) > 0)) and
+                    (len(self.small_cap_pop_contract_list) == 0)) and
             (self.nq_minute_df is not None and not self.nq_minute_df.empty) and
             (self.nq_daily_df is not None and not self.nq_daily_df.empty) and
             (self.es_minute_df is not None and not self.es_minute_df.empty) and

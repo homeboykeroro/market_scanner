@@ -80,7 +80,7 @@ def main():
             ib_client.connect('127.0.0.1', 8888, 0)
             print(f'top gainer scanner ticker list: {[contract.symbol for contract in ib_client.small_cap_pop_contract_list]}')
             us_current_datetime = datetime.datetime.now().astimezone(pytz.timezone('US/Eastern'))
-            premarket_start_time = us_current_datetime.replace(day=us_current_datetime.day - 1, hour=16, minute=0, second=0) if datetime.time(0, 0, 0) < us_current_datetime.time() < datetime.time(4, 0, 0) else us_current_datetime.replace(day=us_current_datetime, hour=4, minute=0, second=0)
+            premarket_start_time = us_current_datetime.replace(day=us_current_datetime.day - 1, hour=16, minute=0, second=0) if datetime.time(0, 0, 0) < us_current_datetime.time() < datetime.time(4, 0, 0) else us_current_datetime.replace(hour=4, minute=0, second=0)
             timeframe_interval = int(((us_current_datetime - premarket_start_time).total_seconds()) / 60)
             
             if timeframe_interval < 1:

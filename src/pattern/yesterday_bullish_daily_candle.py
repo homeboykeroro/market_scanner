@@ -21,8 +21,8 @@ def analyse_yesterday_bullish_daily_candle(minute_df, daily_df) -> None:
     analyse_start_time = time.time()
     us_current_datetime = datetime.datetime.now().astimezone(pytz.timezone('US/Eastern'))
     
-    if us_current_datetime.time() <= datetime.time(16, 0, 0):
-        return
+    # if us_current_datetime.time() <= datetime.time(16, 0, 0):
+    #     return
     
     select_afterhour_datetime = us_current_datetime.replace(hour=16, minute=0, second=0, microsecond=0).strftime('%Y-%m-%d %H:%M:%S')
     afterhour_minute_df = minute_df.loc[select_afterhour_datetime:, :]
@@ -30,7 +30,10 @@ def analyse_yesterday_bullish_daily_candle(minute_df, daily_df) -> None:
     close_df = afterhour_minute_df.loc[:, idx[:, 'Close']].rename(columns={'Close': 'Compare'})
     candle_colour_df = minute_df.loc[:, idx[:, 'Candle Colour']].rename(columns={'Candle Colour': 'Compare'})
 
-    previous_day_df = daily_df.iloc[[0]]
+    if datetime.time(4, 0, 0) <= us_current_datetime.time() <= datetime.time(9, 30, 0):
+        previous_day_df = daily_df.iloc[[0]] 
+    if us_current_datetime.time() >= datetime.time(16, 0, 0):
+        previous_day_df = daily_df.iloc[[-1]]
     print(f'Analyse yesterday bullish daily candle previous day value: {previous_day_df.iloc[[0]].index[-1]}')
     
     previous_close_df = previous_day_df.loc[:, idx[:, 'Close']].rename(columns={'Close': 'Compare'})
@@ -39,7 +42,7 @@ def analyse_yesterday_bullish_daily_candle(minute_df, daily_df) -> None:
                                        .div(previous_close_df.values))
                                        .mul(100))
     
-    bullish_candle_boolean_df = (candle_colour_df == 'GREEN') & (previous_close_pct_df >= MIN_YESTERDAY_CLOSE_CHANGE_PCT)
+    bullish_candle_boolean_df = (candle_colour_df == 'Green') & (previous_close_pct_df >= MIN_YESTERDAY_CLOSE_CHANGE_PCT)
     
     ticker_to_occurrence_idx_list_dict = get_ticker_to_occurrence_idx_list(bullish_candle_boolean_df)
     

@@ -30,6 +30,8 @@ def small_cap_pop_filter():
     elif datetime.time(16, 0, 0) <= us_time.time() < datetime.time(20, 0, 0):
         #logger.log_debug_msg('After hours trading hours')
         scan_code = 'TOP_AFTER_HOURS_PERC_GAIN'
+    else:
+        scan_code = 'TOP_PERC_GAIN'
     
     #debug
     #scanner_filter.scanCode = 'TOP_PERC_GAIN'

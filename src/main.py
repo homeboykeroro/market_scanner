@@ -11,9 +11,9 @@ def main():
     
     try:
         ib_client = IBClient()
-        ib_client.connect('127.0.0.1', 8888, 0)
         
         while True:
+            ib_client.connect('127.0.0.1', 8888, 0)
             small_cap_pop_search_filter = small_cap_pop_filter()
             ib_client.reqScannerSubscription(1, small_cap_pop_search_filter, [], [])
             ib_client.run()
@@ -36,5 +36,6 @@ def main():
             time.sleep(sleep_time)
 
         main()
+
 if __name__ == '__main__':
     main()

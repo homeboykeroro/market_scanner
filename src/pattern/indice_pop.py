@@ -8,7 +8,7 @@ from utils.dataframe_util import get_ticker_to_occurrence_idx_list
 from utils.datetime_util import convert_into_human_readable_time, convert_into_read_out_time
 from utils.logger import Logger
 
-from discord.discord_client import INDICE_POP, send_message
+from discord.discord_client import NQ_RAMP_UP, NQ_CLOSE_PCT_UP, ES_RAMP_UP, ES_CLOSE_PCT_UP, YM_RAMP_UP, YM_CLOSE_PCT_UP, send_message
 
 from database.sqlite_connector import execute_in_transaction
 
@@ -99,16 +99,23 @@ def analyse_index_pop(minute_df, daily_df, index) -> None:
                     readout_message_list.append(readout_message)
                     display_message_list.append(display_message)
                     save_db_params_list.append((ticker, occurrence_idx))
-                    print(f'{index} index close pct change pop, hit scanner datetime: {occurrence_idx}')
+                    print(f'{index} index ramp up, hit scanner datetime: {occurrence_idx}')
         
-        print(f'{index} close pct pop analyse time: {time.time() - analyse_start_time} seconds')
+        print(f'{index} index ramp up analyse time: {time.time() - analyse_start_time} seconds')
+        
+        if index == 'NQ':
+            send_channel = NQ_RAMP_UP
+        elif index == 'ES':
+            send_channel = ES_RAMP_UP
+        elif index == 'YM':
+            send_channel =YM_RAMP_UP
         
         send_message_time = time.time()
         if len(readout_message_list) > 0:
             for pos, readout_message in enumerate(readout_message_list):
                 display_message = display_message_list[pos]
-                send_message(channel=INDICE_POP, message=readout_message, tts=True)
-                send_message(channel=INDICE_POP, message=display_message, tts=False)
+                send_message(channel=send_channel, message=readout_message, tts=True)
+                send_message(channel=send_channel, message=display_message, tts=False)
                 
                 save_ticker = save_db_params_list[pos][0]
                 save_hit_scanner_datetime = save_db_params_list[pos][1]
@@ -116,7 +123,7 @@ def analyse_index_pop(minute_df, daily_df, index) -> None:
                                         (TICKER, HIT_SCANNER_DATETIME, SCAN_PATTERN, BAR_SIZE) 
                                         VALUES (?, ?, ?, ?)""",
                                         (save_ticker, save_hit_scanner_datetime, f'{index}_RAMP_UP', '1min'))
-        print(f'{index} close pct pop send message time: {time.time() - send_message_time} seconds')
+        print(f'{index} index ramp up send message time: {time.time() - send_message_time} seconds')
     
     #close percent change notification
     natural_number_close_pct_df = close_pct_df.fillna(0).astype(int, errors = 'raise')
@@ -175,12 +182,19 @@ def analyse_index_pop(minute_df, daily_df, index) -> None:
         
         print(f'{index} close pct pop analyse time: {time.time() - analyse_start_time} seconds')
         
+        if index == 'NQ':
+            send_channel = NQ_CLOSE_PCT_UP
+        elif index == 'ES':
+            send_channel = ES_CLOSE_PCT_UP
+        elif index == 'YM':
+            send_channel =YM_CLOSE_PCT_UP
+            
         send_message_time = time.time()
         if len(readout_message_list) > 0:
             for pos, readout_message in enumerate(readout_message_list):
                 display_message = display_message_list[pos]
-                send_message(channel=INDICE_POP, message=readout_message, tts=True)
-                send_message(channel=INDICE_POP, message=display_message, tts=False)
+                send_message(channel=send_channel, message=readout_message, tts=True)
+                send_message(channel=send_channel, message=display_message, tts=False)
                 
                 save_ticker = save_db_params_list[pos][0]
                 save_hit_scanner_datetime = save_db_params_list[pos][1]

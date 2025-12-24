@@ -28,12 +28,14 @@ def analyse_index_pop(minute_df, daily_df, index) -> None:
     marubozu_ratio_df = minute_df.loc[:, idx[:, 'Marubozu Ratio']].rename(columns={'Marubozu Ratio': 'Compare'})
     
     us_current_datetime = datetime.datetime.now().astimezone(pytz.timezone('US/Eastern'))
-    if datetime.time(4, 0, 0) <= us_current_datetime.time() <= datetime.time(9, 30, 0):
+    if datetime.time(4, 0, 0) <= us_current_datetime.time() < datetime.time(9, 30, 0):
         previous_day_df = daily_df.iloc[[-1]]
     if us_current_datetime.time() >= datetime.time(16, 0, 0):
         previous_day_df = daily_df.iloc[[-1]]
     if (datetime.time(0, 0, 0) <= us_current_datetime.time() < datetime.time(4, 0, 0)):
         previous_day_df = daily_df.iloc[[-1]]
+    if datetime.time(9, 30, 0) <= us_current_datetime.time() < datetime.time(16, 0, 0):
+        previous_day_df = daily_df.iloc[[0]]
     
     print(f'Analyse {index} index pop previous day value: {previous_day_df.iloc[[0]].index[-1]}')
     

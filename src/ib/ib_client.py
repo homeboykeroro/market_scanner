@@ -1,11 +1,10 @@
 
 import datetime
 import re
+import pandas as pd
+
 from ibapi.client import *
 from ibapi.wrapper import *
-from ibapi.contract import Contract
-import pandas as pd
-import pytz
 
 from discord.discord_client import send_message, MAIN_BOT
 from exception.connection_exception import ConnectionException
@@ -13,17 +12,20 @@ from exception.connection_exception import ConnectionException
 from utils.dataframe_util import append_customised_indicator
 from utils.logger import Logger
 
-from pattern.small_cap_pop import analyse_small_cap_pop
-from pattern.small_cap_ramp_up import analyse_small_cap_ramp_up
-from pattern.yesterday_bullish_daily_candle import analyse_yesterday_bullish_daily_candle
-from pattern.indice_pop import analyse_index_pop
-
 logger = Logger()
 
 class IBClient(EClient, EWrapper):
     small_cap_pop_contract_list = []
     small_cap_pop_df_dict = {}
     small_cap_pop_previous_day_df_dict = {}
+    small_cap_pop_minute_df = None
+    small_cap_pop_daily_df = None
+    nq_minute_df = None
+    nq_daily_df = None
+    es_minute_df = None
+    es_daily_df = None
+    ym_minute_df = None
+    ym_daily_df = None
     nq_futures_df_dict = {}
     es_futures_df_dict = {}
     ym_futures_df_dict = {}
@@ -58,19 +60,12 @@ class IBClient(EClient, EWrapper):
             connect_fail_msg = f'reqId: {reqId}, TWS Connection Error, errorCode: {errorCode}, message: {errorString}'
             raise ConnectionException(connect_fail_msg)
         else:
+            if reqId == -1:
+                connect_fail_msg = f'reqId: {reqId}, TWS Connection Error, errorCode: {errorCode}, message: {errorString}'
+                raise ConnectionException(connect_fail_msg)
+            
             fatal_error_msg = f'reqId: {reqId}, TWS Fatal Error, errorCode: {errorCode}, message: {errorString}'
             raise Exception(fatal_error_msg)
-
-    def scannerData(self, reqId, rank, contractDetails, distance, benchmark, projection, legsStr):
-        # print(f"scannerData. reqId: {reqId}, rank: {rank}, contractDetails: {contractDetails}, distance: {distance}, benchmark: {benchmark}, projection: {projection}, legsStr: {legsStr}.")
-
-        # Small cap pop scan
-        if reqId == 1:
-            if rank == 0:
-                self.small_cap_pop_contract_list = []
-            
-            if re.match('^[a-zA-Z]{1,4}$', contractDetails.contract.symbol): 
-                self.small_cap_pop_contract_list.append(contractDetails.contract)
 
     def historicalData(self, reqId: int, bar: BarData):
         open = bar.open
@@ -163,6 +158,25 @@ class IBClient(EClient, EWrapper):
             
     #Marks the ending of historical bars reception.
     def historicalDataEnd(self, reqId: int, start: str, end: str):
+        if 100 <= reqId < 200:
+            print(f'{self.small_cap_pop_contract_list[reqId - 100].symbol} minute candle, start: {start}, end: {end}') 
+        
+        if 200 <= reqId < 300:
+            print(f'{self.small_cap_pop_contract_list[reqId - 200].symbol} daily candle, start: {start}, end: {end}') 
+        
+        if reqId == 10000:
+            print(f'NQ minute candle, start: {start}, end: {end}') 
+        if reqId == 11000:
+            print(f'NQ daily candle, start: {start}, end: {end}') 
+        if reqId == 20000:
+            print(f'ES minute candle, start: {start}, end: {end}') 
+        if reqId == 21000:
+            print(f'ES daily candle, start: {start}, end: {end}') 
+        if reqId == 30000:
+            print(f'YM minute candle, start: {start}, end: {end}') 
+        if reqId == 31000:
+            print(f'YM daily candle, start: {start}, end: {end}') 
+            
         if (self.small_cap_pop_df_dict 
                 and self.small_cap_pop_contract_list
                 and len(self.small_cap_pop_df_dict) == len(self.small_cap_pop_contract_list)
@@ -183,10 +197,10 @@ class IBClient(EClient, EWrapper):
             complete_minute_df = append_customised_indicator(complete_minute_df)
             
             #debug
-            with pd.option_context('display.max_rows', None,
-                                       'display.max_columns', None,
-                                    'display.precision', 3):
-                logger.log_debug_msg(complete_minute_df)
+            # with pd.option_context('display.max_rows', None,
+            #                            'display.max_columns', None,
+            #                         'display.precision', 3):
+            #     logger.log_debug_msg(complete_minute_df)
             
             for ticker, daily_df_dict in self.small_cap_pop_previous_day_df_dict.items():
                 daily_df_list = []
@@ -202,13 +216,10 @@ class IBClient(EClient, EWrapper):
             
             print(f'completed minute df first index: {complete_minute_df.index.tolist()[0]}, last index: {complete_minute_df.index.tolist()[-1]}')
             print(f'completed daily df indice: {complete_daily_df.index.tolist()}')
-            analyse_small_cap_pop(complete_minute_df, complete_daily_df)
-            analyse_small_cap_ramp_up(complete_minute_df, complete_daily_df)
-            analyse_yesterday_bullish_daily_candle(complete_minute_df, complete_daily_df)
+
+            self.small_cap_pop_minute_df = complete_minute_df
+            self.small_cap_pop_daily_df = complete_daily_df
             
-            self.small_cap_pop_contract_list = []
-            self.small_cap_pop_df_dict = {}
-            self.small_cap_pop_previous_day_df_dict = {}
             #debug
             with pd.option_context('display.max_rows', None,
                                        'display.max_columns', None,
@@ -230,7 +241,9 @@ class IBClient(EClient, EWrapper):
             concat_nq_daily_df = pd.concat(nq_daily_df_list, axis=0)
             complete_nq_minute_df = append_customised_indicator(concat_nq_minute_df)
             complete_nq_daily_df = append_customised_indicator(concat_nq_daily_df)
-            analyse_index_pop(complete_nq_minute_df, complete_nq_daily_df, 'NQ')
+            
+            self.nq_minute_df = complete_nq_minute_df
+            self.nq_daily_df = complete_nq_daily_df
             
             # #debug
             # with pd.option_context('display.max_rows', None,
@@ -259,7 +272,9 @@ class IBClient(EClient, EWrapper):
             concat_es_daily_df = pd.concat(es_daily_df_list, axis=0)
             complete_es_minute_df = append_customised_indicator(concat_es_minute_df)
             complete_es_daily_df = append_customised_indicator(concat_es_daily_df)
-            analyse_index_pop(complete_es_minute_df, complete_es_daily_df, 'ES')
+            
+            self.es_minute_df = complete_es_minute_df
+            self.es_daily_df = complete_es_daily_df
             
             # #debug
             # with pd.option_context('display.max_rows', None,
@@ -288,7 +303,9 @@ class IBClient(EClient, EWrapper):
             concat_ym_daily_df = pd.concat(ym_daily_df_list, axis=0)
             complete_ym_minute_df = append_customised_indicator(concat_ym_minute_df)
             complete_ym_daily_df = append_customised_indicator(concat_ym_daily_df)
-            analyse_index_pop(complete_ym_minute_df, complete_ym_daily_df, 'YM')
+            
+            self.ym_minute_df = complete_ym_minute_df
+            self.ym_daily_df = complete_ym_daily_df
             
             # #debug
             # with pd.option_context('display.max_rows', None,
@@ -301,44 +318,24 @@ class IBClient(EClient, EWrapper):
             #                            'display.max_columns', None,
             #                         'display.precision', 3):
             #     logger.log_debug_msg(complete_ym_daily_df)
-            
+        
+        if ((self.small_cap_pop_minute_df is not None and not self.small_cap_pop_minute_df.empty) and
+            (self.small_cap_pop_daily_df is not None and not self.small_cap_pop_daily_df.empty) and
+            (self.nq_minute_df is not None and not self.nq_minute_df.empty) and
+            (self.nq_daily_df is not None and not self.nq_daily_df.empty) and
+            (self.es_minute_df is not None and not self.es_minute_df.empty) and
+            (self.es_daily_df is not None and not self.es_daily_df.empty) and
+            (self.ym_minute_df is not None and not self.ym_minute_df.empty) and
+            (self.ym_daily_df is not None and not self.ym_daily_df.empty)):
+                print('disconnect after candle data retrieval')
+                self.disconnect()
+        
+    def scannerData(self, reqId, rank, contractDetails, distance, benchmark, projection, legsStr):
+        # print(f"scannerData. reqId: {reqId}, rank: {rank}, contractDetails: {contractDetails}, distance: {distance}, benchmark: {benchmark}, projection: {projection}, legsStr: {legsStr}.")
+        if re.match('^[a-zA-Z]{1,4}$', contractDetails.contract.symbol): 
+            self.small_cap_pop_contract_list.append(contractDetails.contract)
+        
     def scannerDataEnd(self, reqId):
-        # Small cap pop scan
-        if reqId == 1:
-            print(f'top gainer scanner ticker list: {[contract.symbol for contract in self.small_cap_pop_contract_list]}')
-            us_current_datetime = datetime.datetime.now().astimezone(pytz.timezone('US/Eastern'))
-            premarket_start_time = us_current_datetime.replace(hour=4, minute=0, second=0)
-            timeframe_interval = int(((us_current_datetime - premarket_start_time).total_seconds()) / 60)
-            #debug
-            #timeframe_interval = 540
-            if timeframe_interval < 1:
-                print('Timeframe interval less than 1 minute')
-                return
-            
-            print(f'fetch {timeframe_interval} min candel for small cap pop scanner, start time: 04:00:00, end time: {us_current_datetime}')
-            
-            for rank, contract in enumerate(self.small_cap_pop_contract_list):
-                self.reqHistoricalData((100 + rank), contract, '', f'{str(int(timeframe_interval * 60))} S', '1 min', 'TRADES', 0, 1, False, [])
-                self.reqHistoricalData((200 + rank), contract, '', '2 D', '1 day', 'TRADES', 1, 1, False, [])
-
-            nq_contract = Contract()
-            nq_contract.symbol = "NQ"
-            nq_contract.secType = "CONTFUT"
-            nq_contract.exchange = "CME"
-            
-            es_contract = Contract()
-            es_contract.symbol = "ES"
-            es_contract.secType = "CONTFUT"
-            es_contract.exchange = "CME"
-            
-            ym_contract = Contract()
-            ym_contract.symbol = "YM"
-            ym_contract.secType = "CONTFUT"
-            ym_contract.exchange = "CME"
-    
-            self.reqHistoricalData(10000, nq_contract, '', f'{str(int(timeframe_interval * 60))} S', '1 min', 'TRADES', 0, 1, False, [])
-            self.reqHistoricalData(11000, nq_contract, '', '2 D', '1 day', 'TRADES', 1, 1, False, [])
-            self.reqHistoricalData(20000, nq_contract, '', f'{str(int(timeframe_interval * 60))} S', '1 min', 'TRADES', 0, 1, False, [])
-            self.reqHistoricalData(21000, nq_contract, '', '2 D', '1 day', 'TRADES', 1, 1, False, [])
-            self.reqHistoricalData(30000, nq_contract, '', f'{str(int(timeframe_interval * 60))} S', '1 min', 'TRADES', 0, 1, False, [])
-            self.reqHistoricalData(31000, nq_contract, '', '2 D', '1 day', 'TRADES', 1, 1, False, [])
+        self.cancelScannerSubscription(reqId)
+        self.disconnect()
+          

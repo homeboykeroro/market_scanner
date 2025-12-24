@@ -32,6 +32,8 @@ def analyse_small_cap_pop(minute_df, daily_df) -> None:
         previous_day_df = daily_df.iloc[[0]] 
     if us_current_datetime.time() >= datetime.time(16, 0, 0):
         previous_day_df = daily_df.iloc[[-1]]
+    if (datetime.time(0, 0, 0) <= us_current_datetime.time() < datetime.time(16, 0, 0)):
+        previous_day_df = daily_df.iloc[[-1]]
     
     print(f'Analyse small cap pop previous day value: {previous_day_df.iloc[[0]].index[-1]}')
     

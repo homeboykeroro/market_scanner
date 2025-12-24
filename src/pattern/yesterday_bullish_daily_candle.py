@@ -48,11 +48,7 @@ def analyse_yesterday_bullish_daily_candle(minute_df, daily_df) -> None:
     bullish_daily_candle_result_series = bullish_candle_boolean_df.any()   
     bullish_daily_candle_ticker_list = bullish_daily_candle_result_series.index[bullish_daily_candle_result_series].get_level_values(0).tolist()
     
-    if len(bullish_daily_candle_ticker_list) > 0:
-        readout_message_list = []
-        display_message_list = []
-        save_db_params_list = []
-        
+    if len(bullish_daily_candle_ticker_list) > 0: 
         for ticker in bullish_daily_candle_ticker_list:
             occurrence_idx_list = ticker_to_occurrence_idx_list_dict[ticker]
 
@@ -85,25 +81,16 @@ def analyse_yesterday_bullish_daily_candle(minute_df, daily_df) -> None:
                         
                     readout_message = f'{" ".join(ticker)} yesterday bullish daily candle, up {round(previous_close_pct, 2)}% at {read_out_pop_up_time}'
                     display_message = f'{ticker} yesterday bullish daily candle, up {round(previous_close_pct, 2)}% at {hit_scanner_datetime_display}, close: {close}, previous close: {yesterday_close}, total volume: {total_volume:,.2f}'
-                    readout_message_list.append(readout_message)
-                    display_message_list.append(display_message)
-                    save_db_params_list.append((ticker, occurrence_idx))
+                    
+                    send_message(channel=YESTERDAY_BULLISH_DAILY_CANDLE, message=readout_message, tts=True)
+                    send_message(channel=YESTERDAY_BULLISH_DAILY_CANDLE, message=display_message, tts=False)
+
+                    execute_in_transaction("""INSERT INTO PATTERN_ANALYSIS 
+                                            (TICKER, HIT_SCANNER_DATETIME, SCAN_PATTERN, BAR_SIZE) 
+                                            VALUES (?, ?, ?, ?)""",
+                                            (ticker, occurrence_idx, 'YESTERDAY_BULLISH_DAILY_CANDLE', '1day'))
+                    
                     print(f'${ticker} yesterday bullish daily candle, hit scanner datetime: {occurrence_idx}')
         
-        print(f'Yesterday bullish daily candle analyse time: {time.time() - analyse_start_time} seconds')
+    print(f'Yesterday bullish daily candle analyse time: {time.time() - analyse_start_time} seconds')
         
-        send_message_time = time.time()
-        if len(readout_message_list) > 0:
-            for pos, readout_message in enumerate(readout_message_list):
-                display_message = display_message_list[pos]
-                send_message(channel=YESTERDAY_BULLISH_DAILY_CANDLE, message=readout_message, tts=True)
-                send_message(channel=YESTERDAY_BULLISH_DAILY_CANDLE, message=display_message, tts=False)
-                
-                save_ticker = save_db_params_list[pos][0]
-                save_hit_scanner_datetime = save_db_params_list[pos][1]
-                execute_in_transaction("""INSERT INTO PATTERN_ANALYSIS 
-                                        (TICKER, HIT_SCANNER_DATETIME, SCAN_PATTERN, BAR_SIZE) 
-                                        VALUES (?, ?, ?, ?)""",
-                                        (save_ticker, save_hit_scanner_datetime, 'YESTERDAY_BULLISH_DAILY_CANDLE', '1day'))
-        print(f'Yesterday bullish daily candle send message time: {time.time() - send_message_time} seconds')
-                    

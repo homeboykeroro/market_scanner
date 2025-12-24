@@ -1,6 +1,20 @@
 import numpy as np
 import pandas as pd
 
+import warnings
+
+# Existing pct_change warning
+warnings.filterwarnings(
+    'ignore',
+    message="The default fill_method='pad' in DataFrame.pct_change is deprecated"
+)
+
+# Add the replace downcasting warning
+warnings.filterwarnings(
+    'ignore',
+    message="Downcasting behavior in `replace` is deprecated"
+)
+
 idx = pd.IndexSlice
 
 def derive_idx_df(src_df, numeric_idx: bool = True):

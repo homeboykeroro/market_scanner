@@ -319,8 +319,12 @@ class IBClient(EClient, EWrapper):
             #                         'display.precision', 3):
             #     logger.log_debug_msg(complete_ym_daily_df)
         
-        if ((self.small_cap_pop_minute_df is not None and not self.small_cap_pop_minute_df.empty) and
-            (self.small_cap_pop_daily_df is not None and not self.small_cap_pop_daily_df.empty) and
+        if (
+             (((self.small_cap_pop_minute_df is not None and not self.small_cap_pop_minute_df.empty) and
+                (self.small_cap_pop_daily_df is not None and not self.small_cap_pop_daily_df.empty) and 
+                len(self.small_cap_pop_contract_list) > 0)
+                 or 
+                    (len(self.small_cap_pop_contract_list) > 0)) and
             (self.nq_minute_df is not None and not self.nq_minute_df.empty) and
             (self.nq_daily_df is not None and not self.nq_daily_df.empty) and
             (self.es_minute_df is not None and not self.es_minute_df.empty) and

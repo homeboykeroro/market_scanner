@@ -15,7 +15,7 @@ from database.sqlite_connector import execute_in_transaction
 idx = pd.IndexSlice
 logger = Logger()
  
-MIN_INDEX_CLOSE_PCT = 0.03
+MIN_INDEX_CLOSE_PCT = 0.03 #for dip 0.01
 INDEX_TOP_N_VOLUME = 10
 MIN_MARUBOZU_RATIO = 40
 HIT_SCANNER_VALID_PERIOD_IN_MIN = 10
@@ -32,7 +32,7 @@ def analyse_index_pop(minute_df, daily_df, index) -> None:
         previous_day_df = daily_df.iloc[[0]]
     if us_current_datetime.time() >= datetime.time(16, 0, 0):
         previous_day_df = daily_df.iloc[[-1]]
-    if (datetime.time(0, 0, 0) <= us_current_datetime.time() < datetime.time(16, 0, 0)):
+    if (datetime.time(0, 0, 0) <= us_current_datetime.time() < datetime.time(4, 0, 0)):
         previous_day_df = daily_df.iloc[[-1]]
     
     print(f'Analyse {index} index pop previous day value: {previous_day_df.iloc[[0]].index[-1]}')

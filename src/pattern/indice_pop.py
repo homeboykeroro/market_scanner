@@ -18,6 +18,7 @@ logger = Logger()
 MIN_INDEX_CLOSE_PCT = 0.03
 INDEX_TOP_N_VOLUME = 10
 MIN_MARUBOZU_RATIO = 40
+HIT_SCANNER_VALID_PERIOD_IN_MIN = 10
 
 def analyse_index_pop(minute_df, daily_df, index) -> None:
     analyse_start_time = time.time()
@@ -69,37 +70,43 @@ def analyse_index_pop(minute_df, daily_df, index) -> None:
                 if not occurrence_idx:
                     continue
                 
-                record_exist_result = execute_in_transaction("""SELECT COUNT(*) AS ct FROM PATTERN_ANALYSIS 
-                                                              WHERE TICKER = ? 
-                                                              AND HIT_SCANNER_DATETIME = ? 
-                                                              AND SCAN_PATTERN = ? 
-                                                              AND BAR_SIZE = ?""",
-                                                            (ticker, occurrence_idx, f'{index}_RAMP_UP', '1min'))
-                record_count = dict(record_exist_result[0])['ct']
-                    
-                notify = (record_count == 0)
-                
-                if notify:
-                    close = float(minute_df.loc[occurrence_idx, (ticker, 'Close')])
-                    volume = int(minute_df.loc[occurrence_idx, (ticker, 'Volume')])
-                    close_pct = float(minute_df.loc[occurrence_idx, (ticker, 'Close Change%')])
-                    total_volume = int(minute_df.loc[occurrence_idx, (ticker, 'Total Volume')])
-                    ma_20_volume = int(vol_20_ma_df.loc[occurrence_idx, (ticker, 'Compare')])
-                    ma_50_volume = int(vol_50_ma_df.loc[occurrence_idx, (ticker, 'Compare')])
-                    top_n_volume = index_top_n_volume_np
-                    
-                    yesterday_close = float(previous_day_df.loc[previous_day_df.index[-1], (ticker, 'Close')])
-                    previous_close_pct = round((((close - yesterday_close) / yesterday_close) * 100), 2)
-                    
-                    hit_scanner_datetime_display = convert_into_human_readable_time(occurrence_idx)
-                    read_out_pop_up_time = convert_into_read_out_time(occurrence_idx)
-                    
-                    readout_message = f'{" ".join(ticker)} index ramp up {round(close_pct, 2)}% at {read_out_pop_up_time}'
-                    display_message = f'{ticker} index ramp up {round(close_pct, 2)}% at {hit_scanner_datetime_display}, close: {close}, previous close: {yesterday_close}, volume: {volume:,.2f}, total volume: {total_volume:,.2f}, 20MA volume: {ma_20_volume}, 50MA volume: {ma_50_volume}, top N volume: {top_n_volume}'
-                    readout_message_list.append(readout_message)
-                    display_message_list.append(display_message)
-                    save_db_params_list.append((ticker, occurrence_idx))
-                    print(f'{index} index ramp up, hit scanner datetime: {occurrence_idx}')
+                us_current_datetime = datetime.datetime.now().astimezone(pytz.timezone('US/Eastern'))
+                current_datetime_and_ramp_up_time_diff = int(((us_current_datetime.replace(tzinfo=None) - datetime.datetime.strptime(occurrence_idx, '%Y-%m-%d %H:%M:%S')).total_seconds()) / 60)
+
+                #debug
+                #if True:
+                if current_datetime_and_ramp_up_time_diff <= HIT_SCANNER_VALID_PERIOD_IN_MIN:
+                    record_exist_result = execute_in_transaction("""SELECT COUNT(*) AS ct FROM PATTERN_ANALYSIS 
+                                                                  WHERE TICKER = ? 
+                                                                  AND HIT_SCANNER_DATETIME = ? 
+                                                                  AND SCAN_PATTERN = ? 
+                                                                  AND BAR_SIZE = ?""",
+                                                                (ticker, occurrence_idx, f'{index}_RAMP_UP', '1min'))
+                    record_count = dict(record_exist_result[0])['ct']
+
+                    notify = (record_count == 0)
+
+                    if notify:
+                        close = float(minute_df.loc[occurrence_idx, (ticker, 'Close')])
+                        volume = int(minute_df.loc[occurrence_idx, (ticker, 'Volume')])
+                        close_pct = float(minute_df.loc[occurrence_idx, (ticker, 'Close Change%')])
+                        total_volume = int(minute_df.loc[occurrence_idx, (ticker, 'Total Volume')])
+                        ma_20_volume = int(vol_20_ma_df.loc[occurrence_idx, (ticker, 'Compare')])
+                        ma_50_volume = int(vol_50_ma_df.loc[occurrence_idx, (ticker, 'Compare')])
+                        top_n_volume = index_top_n_volume_np
+
+                        yesterday_close = float(previous_day_df.loc[previous_day_df.index[-1], (ticker, 'Close')])
+                        previous_close_pct = round((((close - yesterday_close) / yesterday_close) * 100), 2)
+
+                        hit_scanner_datetime_display = convert_into_human_readable_time(occurrence_idx)
+                        read_out_ramp_up_time = convert_into_read_out_time(occurrence_idx)
+
+                        readout_message = f'{" ".join(ticker)} index ramp up {round(close_pct, 2)}% at {read_out_ramp_up_time}'
+                        display_message = f'{ticker} index ramp up {round(close_pct, 2)}% at {hit_scanner_datetime_display}, close: {close}, previous close: {yesterday_close}, volume: {volume:,.2f}, total volume: {total_volume:,.2f}, 20MA volume: {ma_20_volume}, 50MA volume: {ma_50_volume}, top N volume: {top_n_volume}'
+                        readout_message_list.append(readout_message)
+                        display_message_list.append(display_message)
+                        save_db_params_list.append((ticker, occurrence_idx))
+                        print(f'{index} index ramp up, hit scanner datetime: {occurrence_idx}')
         
         print(f'{index} index ramp up analyse time: {time.time() - analyse_start_time} seconds')
         

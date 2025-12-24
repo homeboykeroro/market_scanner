@@ -28,8 +28,8 @@ def analyse_index_pop(minute_df, daily_df, index) -> None:
     marubozu_ratio_df = minute_df.loc[:, idx[:, 'Marubozu Ratio']].rename(columns={'Marubozu Ratio': 'Compare'})
     
     us_current_datetime = datetime.datetime.now().astimezone(pytz.timezone('US/Eastern'))
-    if datetime.time(4, 0, 0) <= us_current_datetime.time():
-        previous_day_df = daily_df.iloc[[0]]
+    if datetime.time(4, 0, 0) <= us_current_datetime.time() <= datetime.time(9, 30, 0):
+        previous_day_df = daily_df.iloc[[-1]]
     if us_current_datetime.time() >= datetime.time(16, 0, 0):
         previous_day_df = daily_df.iloc[[-1]]
     if (datetime.time(0, 0, 0) <= us_current_datetime.time() < datetime.time(4, 0, 0)):
@@ -175,7 +175,6 @@ def analyse_index_pop(minute_df, daily_df, index) -> None:
                     volume = int(minute_df.loc[occurrence_idx, (ticker, 'Volume')])
                     total_volume = int(minute_df.loc[occurrence_idx, (ticker, 'Total Volume')])
                     
-                    #debug [-1] -> [0] 
                     yesterday_close = float(previous_day_df.loc[previous_day_df.index[-1], (ticker, 'Close')])
                     previous_close_pct = round((((close - yesterday_close) / yesterday_close) * 100), 2)
                     

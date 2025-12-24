@@ -36,8 +36,8 @@ class IBClient(EClient, EWrapper):
     def __init__(self):
         EClient.__init__(self, self)
      
-    def connectAck(self):
-        send_message(channel=MAIN_BOT, message='TWS connection success', tts=True)
+    # def connectAck(self):
+    #     send_message(channel=MAIN_BOT, message='TWS connection success', tts=True)
         
     def error(self,
         reqId: TickerId,
@@ -60,9 +60,14 @@ class IBClient(EClient, EWrapper):
             connect_fail_msg = f'reqId: {reqId}, TWS Connection Error, errorCode: {errorCode}, message: {errorString}'
             raise ConnectionException(connect_fail_msg)
         else:
-            if reqId == -1:
+            if errorCode == -1:
                 connect_fail_msg = f'reqId: {reqId}, TWS Connection Error, errorCode: {errorCode}, message: {errorString}'
                 raise ConnectionException(connect_fail_msg)
+
+            if errorCode == 162:
+                print(f'cancel TWS scanner subscription, reqId: {reqId}')
+                logger.log_debug_msg(f'cancel TWS scanner subscription, reqId: {reqId}')
+                self.cancelScannerSubscription(reqId)
             
             fatal_error_msg = f'reqId: {reqId}, TWS Fatal Error, errorCode: {errorCode}, message: {errorString}'
             raise Exception(fatal_error_msg)
@@ -220,11 +225,11 @@ class IBClient(EClient, EWrapper):
             self.small_cap_pop_minute_df = complete_minute_df
             self.small_cap_pop_daily_df = complete_daily_df
             
-            #debug
-            with pd.option_context('display.max_rows', None,
-                                       'display.max_columns', None,
-                                    'display.precision', 3):
-                logger.log_debug_msg(complete_daily_df)
+            # #debug
+            # with pd.option_context('display.max_rows', None,
+            #                            'display.max_columns', None,
+            #                         'display.precision', 3):
+            #     logger.log_debug_msg(complete_daily_df)
             
         if self.nq_futures_df_dict and self.nq_futures_previous_day_df_dict:
             nq_minute_df_list = []
@@ -349,6 +354,9 @@ class IBClient(EClient, EWrapper):
             self.small_cap_pop_contract_list.append(contractDetails.contract)
         
     def scannerDataEnd(self, reqId):
+        print(f'scanner data end list: {[contract.symbol for contract in self.small_cap_pop_contract_list]}')
+        logger.log_debug_msg(f'scanner data end list: {[contract.symbol for contract in self.small_cap_pop_contract_list]}')
+        
         self.cancelScannerSubscription(reqId)
         self.disconnect()
           

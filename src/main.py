@@ -22,6 +22,8 @@ idx = pd.IndexSlice
 def main():
     ib_client = IBClient()
     
+    send_message(channel=MAIN_BOT, message='TWS connection success', tts=True)
+    
     while True:  
         #Initialise data
         ib_client.small_cap_pop_contract_list = []
@@ -49,10 +51,10 @@ def main():
             ib_client.connect('127.0.0.1', 8888, 0)
             
             small_cap_pop_search_filter = small_cap_pop_filter()
-            ib_client.reqScannerSubscription(1, small_cap_pop_search_filter, [], [])
+            ib_client.reqScannerSubscription(2, small_cap_pop_search_filter, [], [])
             ib_client.run()
         except Exception as e:
-            if isinstance(e, TypeError):
+            if isinstance(e, TypeError) and str(e) == "'>=' not supported between instances of 'NoneType' and 'int'":
                 sleep_time = None
                 print('refreshed top gainer scanner...')
             elif isinstance(e, ConnectionException):
@@ -116,7 +118,7 @@ def main():
             
             ib_client.run()
         except Exception as e:
-            if isinstance(e, TypeError):
+            if isinstance(e, TypeError) and str(e) == "'>=' not supported between instances of 'NoneType' and 'int'":
                 sleep_time = None
                 print('candle data retrieval completed...')
             elif isinstance(e, ConnectionException):
@@ -138,12 +140,22 @@ def main():
                 continue    
         print(f'candle data retrieval time: {time.time() - top_gainer_candle_data_start_time} seconds')
 
-        analyse_small_cap_pop(ib_client.small_cap_pop_minute_df, ib_client.small_cap_pop_daily_df)
-        analyse_small_cap_ramp_up(ib_client.small_cap_pop_minute_df, ib_client.small_cap_pop_daily_df)
-        analyse_yesterday_bullish_daily_candle(ib_client.small_cap_pop_minute_df, ib_client.small_cap_pop_daily_df)
-        analyse_index_pop(ib_client.nq_minute_df, ib_client.nq_daily_df, 'NQ')
-        analyse_index_pop(ib_client.es_minute_df, ib_client.es_daily_df, 'ES')
-        analyse_index_pop(ib_client.ym_minute_df, ib_client.ym_daily_df, 'YM')
-
+        try:
+            if len(ib_client.small_cap_pop_contract_list):
+                analyse_small_cap_pop(ib_client.small_cap_pop_minute_df, ib_client.small_cap_pop_daily_df)
+                analyse_small_cap_ramp_up(ib_client.small_cap_pop_minute_df, ib_client.small_cap_pop_daily_df)
+                #analyse_yesterday_bullish_daily_candle(ib_client.small_cap_pop_minute_df, ib_client.small_cap_pop_daily_df)
+            
+            analyse_index_pop(ib_client.nq_minute_df, ib_client.nq_daily_df, 'NQ')
+            analyse_index_pop(ib_client.es_minute_df, ib_client.es_daily_df, 'ES')
+            analyse_index_pop(ib_client.ym_minute_df, ib_client.ym_daily_df, 'YM')
+        except Exception as e:
+            os.system('cls')
+            print(traceback.format_exc())
+            print(f'Fatal Error, Cause: {e}')
+            send_message(channel=MAIN_BOT, message='Re-establishing Connection Due to Fatal Error', tts=True)
+            time.sleep(10)
+            continue
+        
 if __name__ == '__main__':
     main()

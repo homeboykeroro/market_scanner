@@ -24,7 +24,7 @@ def analyse_small_cap_ramp_up(minute_df, daily_df):
     us_current_datetime = datetime.datetime.now().astimezone(pytz.timezone('US/Eastern'))
     
     if datetime.time(4, 0, 0) <= us_current_datetime.time() <= datetime.time(9, 30, 0):
-        previous_day_df = daily_df.iloc[[0]] 
+        previous_day_df = daily_df.iloc[[-1]] 
     if us_current_datetime.time() >= datetime.time(16, 0, 0):
         previous_day_df = daily_df.iloc[[-1]]
     if (datetime.time(0, 0, 0) <= us_current_datetime.time() < datetime.time(4, 0, 0)):
@@ -98,7 +98,6 @@ def analyse_small_cap_ramp_up(minute_df, daily_df):
                         ma_50_volume = int(minute_df.loc[occurrence_idx, (ticker, '50MA Volume')])
                         total_volume = int(minute_df.loc[occurrence_idx, (ticker, 'Total Volume')])
                         
-                        #debug [-1] -> [0] 
                         yesterday_close = float(previous_day_df.loc[previous_day_df.index[-1], (ticker, 'Close')])
                         
                         hit_scanner_datetime_display = convert_into_human_readable_time(occurrence_idx)
@@ -160,7 +159,6 @@ def analyse_small_cap_ramp_up(minute_df, daily_df):
                         ma_20_volume = int(minute_df.loc[occurrence_idx, (ticker, '20MA Volume')])
                         total_volume = int(minute_df.loc[occurrence_idx, (ticker, 'Total Volume')])
                         
-                        #debug [-1] -> [0] 
                         yesterday_close = float(previous_day_df.loc[previous_day_df.index[-1], (ticker, 'Close')])
                         
                         hit_scanner_datetime_display = convert_into_human_readable_time(occurrence_idx)

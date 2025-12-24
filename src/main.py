@@ -51,7 +51,7 @@ def main():
             ib_client.connect('127.0.0.1', 8888, 0)
             
             small_cap_pop_search_filter = small_cap_pop_filter()
-            ib_client.reqScannerSubscription(2, small_cap_pop_search_filter, [], [])
+            ib_client.reqScannerSubscription(1, small_cap_pop_search_filter, [], [])
             ib_client.run()
         except Exception as e:
             if isinstance(e, TypeError) and str(e) == "'>=' not supported between instances of 'NoneType' and 'int'":
@@ -60,13 +60,13 @@ def main():
             elif isinstance(e, ConnectionException):
                 sleep_time = 180
 
-                os.system('cls')
+                #os.system('cls')
                 print(f'TWS API Connection Lost, Cause: {e}')
                 send_message(channel=MAIN_BOT, message='Re-establishing Connection Due to Connectivity Issue', tts=True)
             else:
                 sleep_time = 10
 
-                os.system('cls')
+                #os.system('cls')
                 print(traceback.format_exc())
                 print(f'Fatal Error, Cause: {e}')
                 send_message(channel=MAIN_BOT, message='Re-establishing Connection Due to Fatal Error', tts=True)
@@ -79,7 +79,7 @@ def main():
         #fetch candle data
         top_gainer_candle_data_start_time = time.time()
         try:
-            ib_client.connect('127.0.0.1', 8888, 0)
+            ib_client.connect('127.0.0.1', 8888, 1)
             print(f'top gainer scanner ticker list: {[contract.symbol for contract in ib_client.small_cap_pop_contract_list]}')
             us_current_datetime = datetime.datetime.now().astimezone(pytz.timezone('US/Eastern'))
             premarket_start_time = us_current_datetime.replace(day=us_current_datetime.day - 1, hour=16, minute=0, second=0) if datetime.time(0, 0, 0) < us_current_datetime.time() < datetime.time(4, 0, 0) else us_current_datetime.replace(hour=4, minute=0, second=0)
@@ -124,13 +124,13 @@ def main():
             elif isinstance(e, ConnectionException):
                 sleep_time = 180
 
-                os.system('cls')
+                #os.system('cls')
                 print(f'TWS API Connection Lost, Cause: {e}')
                 send_message(channel=MAIN_BOT, message='Re-establishing Connection Due to Connectivity Issue', tts=True)
             else:
                 sleep_time = 10
 
-                os.system('cls')
+                #os.system('cls')
                 print(traceback.format_exc())
                 print(f'Fatal Error, Cause: {e}')
                 send_message(channel=MAIN_BOT, message='Re-establishing Connection Due to Fatal Error', tts=True)
@@ -144,13 +144,13 @@ def main():
             if len(ib_client.small_cap_pop_contract_list):
                 analyse_small_cap_pop(ib_client.small_cap_pop_minute_df, ib_client.small_cap_pop_daily_df)
                 analyse_small_cap_ramp_up(ib_client.small_cap_pop_minute_df, ib_client.small_cap_pop_daily_df)
-                #analyse_yesterday_bullish_daily_candle(ib_client.small_cap_pop_minute_df, ib_client.small_cap_pop_daily_df)
+                analyse_yesterday_bullish_daily_candle(ib_client.small_cap_pop_minute_df, ib_client.small_cap_pop_daily_df)
             
             analyse_index_pop(ib_client.nq_minute_df, ib_client.nq_daily_df, 'NQ')
             analyse_index_pop(ib_client.es_minute_df, ib_client.es_daily_df, 'ES')
             analyse_index_pop(ib_client.ym_minute_df, ib_client.ym_daily_df, 'YM')
         except Exception as e:
-            os.system('cls')
+            #os.system('cls')
             print(traceback.format_exc())
             print(f'Fatal Error, Cause: {e}')
             send_message(channel=MAIN_BOT, message='Re-establishing Connection Due to Fatal Error', tts=True)

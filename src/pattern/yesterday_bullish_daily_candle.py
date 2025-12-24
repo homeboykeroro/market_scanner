@@ -41,9 +41,9 @@ def analyse_yesterday_bullish_daily_candle(minute_df, daily_df) -> None:
     
     previous_close_df = previous_day_df.loc[:, idx[:, 'Close']].rename(columns={'Close': 'Compare'})
     
-    previous_close_pct_df = (((close_df.sub(previous_close_df.values))
-                                       .div(previous_close_df.values))
-                                       .mul(100))
+    sub_df = minute_df.loc[:, idx[:, 'Close']].sub(previous_close_df.values)
+    div_df = sub_df.div(previous_close_df.values)
+    previous_close_pct_df = div_df.mul(100)
     
     bullish_candle_boolean_df = (candle_colour_df == 'Green') & (previous_close_pct_df >= MIN_YESTERDAY_CLOSE_CHANGE_PCT)
     

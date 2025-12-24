@@ -36,9 +36,10 @@ def analyse_small_cap_pop(minute_df, daily_df) -> None:
     
     print(f'Analyse small cap pop previous day value: {previous_day_df.iloc[[0]].index[-1]}')
     
-    previous_close_pct_df = (((minute_df.loc[:, idx[:, 'Close']].sub(previous_day_df.loc[:, idx[:, 'Close']].values))
-                                                                .div(previous_day_df.loc[:, idx[:, 'Close']].values))
-                                                                .mul(100)).rename(columns={'Close': 'Compare'})
+    sub_df = minute_df.loc[:, idx[:, 'Close']].sub(previous_day_df.loc[:, idx[:, 'Close']].values)
+    div_df = sub_df.div(previous_day_df.loc[:, idx[:, 'Close']].values)
+    previous_close_pct_df = div_df.mul(100).rename(columns={'Close': 'Compare'})
+    
     lower_body_df = minute_df.loc[:, idx[:, 'Candle Lower Body']].rename(columns={'Candle Lower Body': 'Compare'})
     
     previous_close_df = previous_day_df.loc[:, idx[:, 'Close']].rename(columns={'Close': 'Compare'})
@@ -54,6 +55,26 @@ def analyse_small_cap_pop(minute_df, daily_df) -> None:
                                      .mul(100))
     candle_close_pct_boolean_df = (close_pct_df >= MIN_CLOSE_PCT)
     previous_close_pct_boolean_df = (previous_close_pct_df >= MIN_PREVIOUS_CLOSE_PCT)
+    
+    #debug
+    with pd.option_context('display.max_rows', None,
+                               'display.max_columns', None,
+                            'display.precision', 3):
+        logger.log_debug_msg('minute_df')
+        logger.log_debug_msg(minute_df)
+    #debug
+    with pd.option_context('display.max_rows', None,
+                               'display.max_columns', None,
+                            'display.precision', 3):
+        logger.log_debug_msg("minute_df.loc[:, idx[:, 'Close']]")
+        logger.log_debug_msg(minute_df.loc[:, idx[:, 'Close']])
+    #debug
+    with pd.option_context('display.max_rows', None,
+                               'display.max_columns', None,
+                            'display.precision', 3):
+        logger.log_debug_msg('previous_close_pct_df')
+        logger.log_debug_msg(previous_close_pct_df)
+    
     gap_up_pct_boolean_df = (gap_up_pct_df >= MIN_GAP_UP_PCT)
     pop_up_boolean_df = (candle_close_pct_boolean_df) & (previous_close_pct_boolean_df) & (gap_up_pct_boolean_df)
     

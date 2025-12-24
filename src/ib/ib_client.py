@@ -68,6 +68,7 @@ class IBClient(EClient, EWrapper):
                 print(f'cancel TWS scanner subscription, reqId: {reqId}')
                 logger.log_debug_msg(f'cancel TWS scanner subscription, reqId: {reqId}')
                 self.cancelScannerSubscription(reqId)
+                self.disconnect()
             
             fatal_error_msg = f'reqId: {reqId}, TWS Fatal Error, errorCode: {errorCode}, message: {errorString}'
             raise Exception(fatal_error_msg)

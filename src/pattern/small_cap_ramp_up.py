@@ -16,7 +16,7 @@ logger = Logger()
 MIN_MARUBOZU_RATIO = 40
 MIN_CLOSE_PCT = 4
 MIN_MA_VOLUME = 3000
-HIT_SCANNER_VALID_PERIOD_IN_MIN = 5
+HIT_SCANNER_VALID_PERIOD_IN_MIN = 10
         
 def analyse_small_cap_ramp_up(minute_df, daily_df):
     analyse_start_time = time.time()
@@ -33,10 +33,11 @@ def analyse_small_cap_ramp_up(minute_df, daily_df):
     print(f'Analyse small cap pop ramp up previous day value: {previous_day_df.iloc[[0]].index[-1]}')
     
     close_pct_df = minute_df.loc[:, idx[:, 'Close Change%']].rename(columns={'Close Change%': 'Compare'})
-    previous_close_df = previous_day_df.loc[:, idx[:, 'Close']] 
-    previous_close_pct_df = (((minute_df.loc[:, idx[:, 'Close']].sub(previous_close_df.values))
-                                                                .div(previous_close_df.values))
-                                                                .mul(100)).rename(columns={'Close': 'Close Change%'})
+    previous_close_df = previous_day_df.loc[:, idx[:, 'Close']]
+    
+    sub_df = minute_df.loc[:, idx[:, 'Close']].sub(previous_close_df.values)
+    div_df = sub_df.div(previous_close_df.values)
+    previous_close_pct_df = div_df.mul(100).rename(columns={'Close': 'Close Change%'})
     
     candle_colour_df = minute_df.loc[:, idx[:, 'Candle Colour']].rename(columns={'Candle Colour': 'Compare'})
     marubozu_ratio_df = minute_df.loc[:, idx[:, 'Marubozu Ratio']].rename(columns={'Marubozu Ratio': 'Compare'})

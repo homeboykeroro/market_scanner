@@ -144,7 +144,7 @@ def main():
             if len(ib_client.small_cap_pop_contract_list):
                 analyse_small_cap_pop(ib_client.small_cap_pop_minute_df, ib_client.small_cap_pop_daily_df)
                 analyse_small_cap_ramp_up(ib_client.small_cap_pop_minute_df, ib_client.small_cap_pop_daily_df)
-                analyse_yesterday_bullish_daily_candle(ib_client.small_cap_pop_minute_df, ib_client.small_cap_pop_daily_df)
+                #analyse_yesterday_bullish_daily_candle(ib_client.small_cap_pop_minute_df, ib_client.small_cap_pop_daily_df)
             
             analyse_index_pop(ib_client.nq_minute_df, ib_client.nq_daily_df, 'NQ')
             analyse_index_pop(ib_client.es_minute_df, ib_client.es_daily_df, 'ES')

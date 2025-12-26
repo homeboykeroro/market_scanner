@@ -23,7 +23,11 @@ def analyse_yesterday_bullish_daily_candle(minute_df, daily_df) -> None:
     # if us_current_datetime.time() <= datetime.time(16, 0, 0):
     #     return
     
-    select_afterhour_datetime = us_current_datetime.replace(day=us_current_datetime.day - 1, hour=16, minute=0, second=0, microsecond=0).strftime('%Y-%m-%d %H:%M:%S') if (datetime.time(0, 0, 0) <= us_current_datetime.time() < datetime.time(4, 0, 0)) else us_current_datetime.replace(hour=16, minute=0, second=0, microsecond=0).strftime('%Y-%m-%d %H:%M:%S')
+    if us_current_datetime.time() > datetime.time(16, 0, 0):
+        us_current_datetime.replace(hour=16, minute=0, second=0, microsecond=0).strftime('%Y-%m-%d %H:%M:%S')
+    else:
+        select_afterhour_datetime = us_current_datetime.replace(day=us_current_datetime.day - 1, hour=16, minute=0, second=0, microsecond=0).strftime('%Y-%m-%d %H:%M:%S') 
+    
     afterhour_minute_df = minute_df.loc[select_afterhour_datetime:, :]
     print(f'Yesterday bullish daily candle select afterhour datetime: {select_afterhour_datetime}')
 
@@ -41,7 +45,7 @@ def analyse_yesterday_bullish_daily_candle(minute_df, daily_df) -> None:
     
     previous_close_df = previous_day_df.loc[:, idx[:, 'Close']].rename(columns={'Close': 'Compare'})
     
-    sub_df = minute_df.loc[:, idx[:, 'Close']].sub(previous_close_df.values)
+    sub_df = close_df.sub(previous_close_df.values)
     div_df = sub_df.div(previous_close_df.values)
     previous_close_pct_df = div_df.mul(100)
     

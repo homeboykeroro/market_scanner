@@ -116,7 +116,7 @@ class NasdaqIndexData(EClient, EWrapper):
             analyse_index_pop(complete_nq_minute_df, complete_nq_daily_df, 'NQ')
             self.initialise()
             print(f'clientID: {self.clientId}, completed NQ minute candle start: {complete_nq_minute_df.iloc[[0]].index.to_list()[0]}, end: {complete_nq_minute_df.iloc[[-1]].index.to_list()[0]}')
-            print(f'clientID: {self.clientId}, completed NQ daily candle start: {complete_nq_daily_df.index.tolist()}')
+            print(f'clientID: {self.clientId}, completed NQ daily candle range: {complete_nq_daily_df.index.tolist()}')
             print(f'clientID: {self.clientId}, complete NQ data analysis')
             #logger.log_debug_msg(f'clientID: {self.clientId}, completed NQ minute candle start: {complete_nq_minute_df.iloc[[0]].index.to_list()[0]}, end: {complete_nq_minute_df.iloc[[-1]].index.to_list()[0]}')
             #logger.log_debug_msg(f'clientID: {self.clientId}, completed NQ daily candle start: {complete_nq_daily_df.index.tolist()}')

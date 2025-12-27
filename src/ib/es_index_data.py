@@ -116,7 +116,7 @@ class SP500IndexData(EClient, EWrapper):
             analyse_index_pop(complete_es_minute_df, complete_es_daily_df, 'ES')
             self.initialise()
             print(f'clientID: {self.clientId}, completed ES minute candle start: {complete_es_minute_df.iloc[[0]].index.to_list()[0]}, end: {complete_es_minute_df.iloc[[-1]].index.to_list()[0]}')
-            print(f'clientID: {self.clientId}, completed ES daily candle start: {complete_es_daily_df.index.tolist()}')
+            print(f'clientID: {self.clientId}, completed ES daily candle range: {complete_es_daily_df.index.tolist()}')
             print(f'clientID: {self.clientId}, complete ES data analysis')
             #logger.log_debug_msg(f'clientID: {self.clientId}, completed ES minute candle start: {complete_es_minute_df.iloc[[0]].index.to_list()[0]}, end: {complete_es_minute_df.iloc[[-1]].index.to_list()[0]}')
             #logger.log_debug_msg(f'clientID: {self.clientId}, completed ES daily candle start: {complete_es_daily_df.index.tolist()}')

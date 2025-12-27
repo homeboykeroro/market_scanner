@@ -3,15 +3,15 @@ import time
 import pandas as pd
 import pytz
 
-from discord.discord_client import send_message, SMALL_CAP_RAMP_UP
+from notification.discord_client import send_message, SMALL_CAP_RAMP_UP
 from utils.datetime_util import convert_into_human_readable_time, convert_into_read_out_time
 from utils.dataframe_util import get_ticker_to_occurrence_idx_list
-from utils.logger import Logger
+#from utils.logger import Logger
 
 from database.sqlite_connector import execute_in_transaction
 
 idx = pd.IndexSlice
-logger = Logger()
+#logger = Logger()
 
 MIN_MARUBOZU_RATIO = 40
 MIN_CLOSE_PCT = 4

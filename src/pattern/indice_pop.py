@@ -6,14 +6,14 @@ import pytz
 
 from utils.dataframe_util import get_ticker_to_occurrence_idx_list
 from utils.datetime_util import convert_into_human_readable_time, convert_into_read_out_time
-from utils.logger import Logger
+#from utils.logger import Logger
 
-from discord.discord_client import NQ_RAMP_UP, NQ_CLOSE_PCT_UP, ES_RAMP_UP, ES_CLOSE_PCT_UP, YM_RAMP_UP, YM_CLOSE_PCT_UP, send_message
+from notification.discord_client import NQ_RAMP_UP, NQ_CLOSE_PCT_UP, ES_RAMP_UP, ES_CLOSE_PCT_UP, YM_RAMP_UP, YM_CLOSE_PCT_UP, send_message
 
 from database.sqlite_connector import execute_in_transaction
 
 idx = pd.IndexSlice
-logger = Logger()
+#logger = Logger()
  
 MIN_INDEX_CLOSE_PCT = 0.02 #for dip 0.01
 INDEX_TOP_N_VOLUME = 10

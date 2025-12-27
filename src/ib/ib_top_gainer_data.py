@@ -35,6 +35,25 @@ class IBClient(EClient, EWrapper):
     
     def __init__(self):
         EClient.__init__(self, self)
+    
+    def initialise(self):
+        self.small_cap_pop_contract_list = []
+        self.small_cap_pop_df_dict = {}
+        self.small_cap_pop_previous_day_df_dict = {}
+        self.small_cap_pop_minute_df = None
+        self.small_cap_pop_daily_df = None
+        self.nq_minute_df = None
+        self.nq_daily_df = None
+        self.es_minute_df = None
+        self.es_daily_df = None
+        self.ym_minute_df = None
+        self.ym_daily_df = None
+        self.nq_futures_df_dict = {}
+        self.es_futures_df_dict = {}
+        self.ym_futures_df_dict = {}
+        self.nq_futures_previous_day_df_dict = {}
+        self.es_futures_previous_day_df_dict = {}
+        self.ym_futures_previous_day_df_dict = {}
      
     # def connectAck(self):
     #     send_message(channel=MAIN_BOT, message='TWS connection success', tts=True)

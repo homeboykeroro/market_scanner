@@ -5,7 +5,7 @@ from utils.logger import Logger
 from utils.config_util import get_config
 from utils.offline_tts import TextToSpeechEngine
 
-logger = Logger()
+#logger = Logger()
 text_to_speech_engine = TextToSpeechEngine()
 
 MAIN_BOT = 'CHATBOT'
@@ -50,7 +50,7 @@ def send_message(channel, message, tts=False):
     
     if channel not in channel_to_url_dict:
         print(f'Cannot find channel type of {channel}')
-        logger.log_debug_msg(f'Cannot find channel type of {channel}')
+        #logger.log_debug_msg(f'Cannot find channel type of {channel}')
         text_to_speech_engine.speak(f'Cannot find channel type of {channel}')
         return
     
@@ -65,7 +65,7 @@ def send_message(channel, message, tts=False):
         # Rare now, but safe to handle
         retry_after = res.headers.get("Retry-After", 2)
         print(f'Rate limited on {channel}, waiting {retry_after}s...')
-        logger.log_debug_msg(f'Rate limited on {channel}, waiting {retry_after}s...')
+        #logger.log_debug_msg(f'Rate limited on {channel}, waiting {retry_after}s...')
         text_to_speech_engine.speak(f'Rate limited on {channel}, waiting {retry_after}s...')
         time.sleep(float(retry_after) + 1)
         # Optional: retry once
@@ -75,7 +75,7 @@ def send_message(channel, message, tts=False):
             return True
     else:
         print(f'Failed to send message to discord channe, channel type: {channel}, response code: {res.status_code}')
-        logger.log_debug_msg(f'Failed to send message to discord channe, channel type: {channel}, response code: {res.status_code}')
+        #logger.log_debug_msg(f'Failed to send message to discord channe, channel type: {channel}, response code: {res.status_code}')
         text_to_speech_engine.speak(f'Failed to send message to discord channe, channel type: {channel}, response code: {res.status_code}')
 
 

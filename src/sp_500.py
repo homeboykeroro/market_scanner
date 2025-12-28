@@ -67,6 +67,7 @@ def main():
                 #os.system('cls')
                 print(traceback.format_exc())
                 print(f'Fatal Error, Cause: {e}')
+                print('Re-establishing S&P500 scanner connection due to fatal error')
                 #logger.log_debug_msg(f'Fatal Error, Cause: {e}')
                 send_message(channel=MAIN_BOT, message='Re-establishing S&P500 scanner connection due to fatal error', tts=True)
             if sleep_time:

@@ -40,7 +40,7 @@ def main():
             small_cap_pop_search_filter = small_cap_pop_filter()
             top_gainer_screener.reqScannerSubscription(1, small_cap_pop_search_filter, [], [])
             top_gainer_screener.screener_finished.wait()
-            print(f'Close TWS connection for top gainer screener, clientID: {top_gainer_data.clientId}')
+            print(f'Close TWS connection for top gainer screener, clientID: {top_gainer_screener.clientId}')
             top_gainer_screener.disconnect()
             print('Top gainer screener completed scanning')
             

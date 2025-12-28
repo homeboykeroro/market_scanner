@@ -21,6 +21,7 @@ class SP500IndexData(EClient, EWrapper):
     
     def __init__(self):
         EClient.__init__(self, self)
+        self.initialise()
         self.data_finished = threading.Event() 
         
     def initialise(self):

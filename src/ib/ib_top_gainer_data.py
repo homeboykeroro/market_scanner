@@ -23,6 +23,7 @@ class TopGainerData(EClient, EWrapper):
     
     def __init__(self):
         EClient.__init__(self, self)
+        self.initialise()
         self.screener_finished = threading.Event() 
         self.data_finished = threading.Event() 
 

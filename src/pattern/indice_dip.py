@@ -135,5 +135,81 @@ def analyse_index_dip(minute_df, daily_df, index) -> None:
                                         (save_ticker, save_hit_scanner_datetime, f'{index}_DIP', '1min'))
         print(f'{index} index dip send message time: {time.time() - send_message_time} seconds')
     
-  
+    #close percent change notification
+    natural_number_close_pct_df = close_pct_df.fillna(0).astype(int, errors = 'raise')
+    natural_number_close_pct_df = natural_number_close_pct_df.where((natural_number_close_pct_df < 0).values)
+    natural_number_close_pct_df = natural_number_close_pct_df.ffill()
+    shifted_natural_number_close_pct_df = natural_number_close_pct_df.shift(1)
+    progressive_boolean_df = ((natural_number_close_pct_df - shifted_natural_number_close_pct_df) < 0)
+    close_pct_cum_max_df = natural_number_close_pct_df.cummax()
+    compare_cum_max_boolean_df = (natural_number_close_pct_df >= close_pct_cum_max_df)
+    hit_scanner_close_pct_boolean_df = (progressive_boolean_df) & (compare_cum_max_boolean_df)
+    ticker_to_close_pct_occurrence_idx_list_dict = get_ticker_to_occurrence_idx_list(hit_scanner_close_pct_boolean_df)
     
+    index_close_pct_result_series = hit_scanner_close_pct_boolean_df.any()   
+    index_close_pct_ticker_list = index_close_pct_result_series.index[index_close_pct_result_series].get_level_values(0).tolist()
+    
+    if len(index_close_pct_ticker_list) > 0:
+        readout_message_list = []
+        display_message_list = []
+        save_db_params_list = []
+    
+        for ticker in index_close_pct_ticker_list:
+            occurrence_idx_list = ticker_to_close_pct_occurrence_idx_list_dict[ticker]
+    
+            for occurrence_idx in occurrence_idx_list:   
+                if not occurrence_idx:
+                    continue
+        
+                record_exist_result = execute_in_transaction("""SELECT COUNT(*) AS ct FROM PATTERN_ANALYSIS 
+                                                  WHERE TICKER = ? 
+                                                  AND HIT_SCANNER_DATETIME = ? 
+                                                  AND SCAN_PATTERN = ? 
+                                                  AND BAR_SIZE = ?""",
+                                                (ticker, occurrence_idx, f'{index}_CLOSE_PCT_DIP', '1min'))
+                record_count = dict(record_exist_result[0])['ct']
+    
+                notify = (record_count == 0)
+    
+                if notify:
+                    close = float(minute_df.loc[occurrence_idx, (ticker, 'Close')])
+                    volume = int(minute_df.loc[occurrence_idx, (ticker, 'Volume')])
+                    total_volume = int(minute_df.loc[occurrence_idx, (ticker, 'Total Volume')])
+    
+                    yesterday_close = float(previous_day_df.loc[previous_day_df.index[-1], (ticker, 'Close')])
+                    previous_close_pct = round((((close - yesterday_close) / yesterday_close) * 100), 2)
+    
+                    hit_scanner_datetime_display = convert_into_human_readable_time(occurrence_idx)
+                    read_out_dip_time = convert_into_read_out_time(occurrence_idx)
+    
+                    readout_message = f'{" ".join(ticker)} index reaches {round(previous_close_pct, 2)}% at {read_out_dip_time}'
+                    display_message = f'{ticker} index reaches {round(previous_close_pct, 2)}% at {hit_scanner_datetime_display}, close: {close}, previous close: {yesterday_close}, volume: {volume:,.2f}, total volume: {total_volume:,.2f}'
+                    readout_message_list.append(readout_message)
+                    display_message_list.append(display_message)
+                    save_db_params_list.append((ticker, occurrence_idx))
+                    print(f'{index} index close pct change dip, hit scanner datetime: {occurrence_idx}')
+    
+        print(f'{index} close pct dip analyse time: {time.time() - analyse_start_time} seconds')
+    
+        if index == 'NQ':
+            send_channel = NQ_CLOSE_PCT_DOWN
+        elif index == 'ES':
+            send_channel = ES_CLOSE_PCT_DOWN
+        elif index == 'YM':
+            send_channel =YM_CLOSE_PCT_DOWN
+    
+        send_message_time = time.time()
+        if len(readout_message_list) > 0:
+            for pos, readout_message in enumerate(readout_message_list):
+                display_message = display_message_list[pos]
+                send_message(channel=send_channel, message=readout_message, tts=True)
+                send_message(channel=send_channel, message=display_message, tts=False)
+    
+                save_ticker = save_db_params_list[pos][0]
+                save_hit_scanner_datetime = save_db_params_list[pos][1]
+                execute_in_transaction("""INSERT INTO PATTERN_ANALYSIS 
+                                        (TICKER, HIT_SCANNER_DATETIME, SCAN_PATTERN, BAR_SIZE) 
+                                        VALUES (?, ?, ?, ?)""",
+                                        (save_ticker, save_hit_scanner_datetime, f'{index}_CLOSE_PCT_DIP', '1min'))
+        print(f'{index} close pct dip send message time: {time.time() - send_message_time} seconds')
+

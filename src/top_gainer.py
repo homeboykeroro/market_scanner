@@ -66,12 +66,19 @@ def main():
                 return
 
             print(f'fetch {timeframe_interval} min candel for small cap pop scanner, start time: {premarket_start_time.strftime('%Y-%m-%d %H:%M:%S')}, end time: {us_current_datetime}')
-            for rank, contract in enumerate(top_gainer_data.small_cap_pop_contract_list):
-                top_gainer_data.reqHistoricalData((100 + rank), contract, '', f'{str(int(timeframe_interval * 60))} S', '1 min', 'TRADES', 0, 1, False, [])
-                top_gainer_data.reqHistoricalData((200 + rank), contract, '', '2 D', '1 day', 'TRADES', 1, 1, False, [])
-            top_gainer_data.data_finished.wait()
-            print(f'Close TWS connection for top gainer data, clientID: {top_gainer_data.clientId}')
-            top_gainer_data.disconnect()
+            
+            top_gainer_data.small_cap_pop_contract_list = top_gainer_screener.small_cap_pop_contract_list
+            if top_gainer_data.small_cap_pop_contract_list:
+                for rank, contract in enumerate(top_gainer_data.small_cap_pop_contract_list):
+                    top_gainer_data.reqHistoricalData((100 + rank), contract, '', f'{str(int(timeframe_interval * 60))} S', '1 min', 'TRADES', 0, 1, False, [])
+                    top_gainer_data.reqHistoricalData((200 + rank), contract, '', '2 D', '1 day', 'TRADES', 1, 1, False, [])
+                top_gainer_data.data_finished.wait()
+                print(f'Close TWS connection for top gainer data, clientID: {top_gainer_data.clientId}')
+                top_gainer_data.disconnect()
+            else:
+                print('No top gainer contract list found')
+                print(f'Close TWS connection for top gainer data, clientID: {top_gainer_data.clientId}')
+                top_gainer_data.disconnect()
         except Exception as e:
             if isinstance(e, ConnectionException):
                 sleep_time = 180

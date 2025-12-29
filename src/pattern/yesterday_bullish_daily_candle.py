@@ -3,7 +3,7 @@ import time
 import pandas as pd
 import pytz
 
-from discord.discord_client import YESTERDAY_BULLISH_DAILY_CANDLE, send_message
+from notification.discord_client import YESTERDAY_BULLISH_DAILY_CANDLE, send_message
 
 from utils.datetime_util import convert_into_human_readable_time, convert_into_read_out_time
 from utils.dataframe_util import get_ticker_to_occurrence_idx_list
@@ -20,26 +20,39 @@ def analyse_yesterday_bullish_daily_candle(minute_df, daily_df) -> None:
     analyse_start_time = time.time()
     us_current_datetime = datetime.datetime.now().astimezone(pytz.timezone('US/Eastern'))
     
-    # if us_current_datetime.time() <= datetime.time(16, 0, 0):
-    #     return
+    if (not (us_current_datetime.time() > datetime.time(16, 0, 0))):
+        print('yesterday bullish daily candle analysis is idle...')
+        return
+
+    top_gainer_ticker_list = list(set(minute_df.columns.get_level_values(0).to_list()))
+    latest_minute_date = minute_df.iloc[[-1]].index.tolist()[0].strftime('%Y-%m-%d')
+    print(f'yesterday bullish daily candle latest_minute_date: {latest_minute_date}')
+    filtered_ticker_list = []
     
-    if us_current_datetime.time() > datetime.time(16, 0, 0):
-        us_current_datetime.replace(hour=16, minute=0, second=0, microsecond=0).strftime('%Y-%m-%d %H:%M:%S')
-    else:
-        select_afterhour_datetime = us_current_datetime.replace(day=us_current_datetime.day - 1, hour=16, minute=0, second=0, microsecond=0).strftime('%Y-%m-%d %H:%M:%S') 
+    for rank, top_gainer_ticker in enumerate(top_gainer_ticker_list):
+        record_count_result = execute_in_transaction("""SELECT COUNT(*) AS ct FROM TOP_GAINER_HISTORY
+                                                        WHERE TICKER = ?
+                                                        AND DATE(SCAN_DATE) = ?
+                                                        ORDER BY SCAN_DATE DESC
+                                                    """,
+                                                    (top_gainer_ticker, latest_minute_date))
+        record_count = dict(record_count_result[0])['ct']
+        if record_count > 0:
+            filtered_ticker_list.append(top_gainer_ticker)
     
-    afterhour_minute_df = minute_df.loc[select_afterhour_datetime:, :]
-    print(f'Yesterday bullish daily candle select afterhour datetime: {select_afterhour_datetime}')
+    print(f'filtered previous top gainer ticker list: {filtered_ticker_list}')
+    
+    if len(filtered_ticker_list) < 1:
+        print(f'no top gainer ticker found in yesterday bullish daily candle...')
+        return
+    
+    after_hour_start_datetime = latest_minute_date + ' ' + '16:00:00'
+    afterhour_minute_df = minute_df.loc[after_hour_start_datetime:, idx[filtered_ticker_list], :]
+    print(f'Yesterday bullish daily candle select afterhour datetime: {after_hour_start_datetime}')
 
     close_df = afterhour_minute_df.loc[:, idx[:, 'Close']].rename(columns={'Close': 'Compare'})
-    candle_colour_df = minute_df.loc[:, idx[:, 'Candle Colour']].rename(columns={'Candle Colour': 'Compare'})
-
-    if datetime.time(4, 0, 0) <= us_current_datetime.time() <= datetime.time(9, 30, 0):
-        previous_day_df = daily_df.iloc[[-1]] 
-    if us_current_datetime.time() >= datetime.time(16, 0, 0):
-        previous_day_df = daily_df.iloc[[-1]]
-    if (datetime.time(0, 0, 0) <= us_current_datetime.time() < datetime.time(4, 0, 0)):
-        previous_day_df = daily_df.iloc[[-1]]
+    candle_colour_df = afterhour_minute_df.loc[:, idx[:, 'Candle Colour']].rename(columns={'Candle Colour': 'Compare'})
+    previous_day_df = daily_df.iloc[[-1]]
         
     print(f'Analyse yesterday bullish daily candle previous day value: {previous_day_df.iloc[[0]].index[-1]}')
     
@@ -78,8 +91,8 @@ def analyse_yesterday_bullish_daily_candle(minute_df, daily_df) -> None:
                 notify = (occurrence == 0)
                 
                 if notify:
-                    close = float(minute_df.loc[occurrence_idx, (ticker, 'Close')])
-                    total_volume = int(minute_df.loc[occurrence_idx, (ticker, 'Total Volume')])
+                    close = float(afterhour_minute_df.loc[occurrence_idx, (ticker, 'Close')])
+                    total_volume = int(afterhour_minute_df.loc[occurrence_idx, (ticker, 'Total Volume')])
                         
                     yesterday_close = float(previous_day_df.loc[previous_day_df.index[-1], (ticker, 'Close')])
                     previous_close_pct = float(previous_close_pct_df.loc[occurrence_idx, (ticker, 'Compare')])

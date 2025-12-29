@@ -13,6 +13,7 @@ from utils.dataframe_util import append_customised_indicator
 
 from pattern.small_cap_pop import analyse_small_cap_pop
 from pattern.small_cap_ramp_up import analyse_small_cap_ramp_up
+from pattern.yesterday_bullish_daily_candle import analyse_yesterday_bullish_daily_candle
 
 #logger = Logger()
 
@@ -145,6 +146,7 @@ class TopGainerData(EClient, EWrapper):
             
             analyse_small_cap_pop(complete_minute_df, complete_daily_df)
             analyse_small_cap_ramp_up(complete_minute_df, complete_daily_df)
+            analyse_yesterday_bullish_daily_candle(complete_minute_df, complete_daily_df)
             
             self.initialise()
             print(f'clientID: {self.clientId}, completed top gainer minute candle start: {complete_minute_df.iloc[[0]].index.to_list()[0]}, end: {complete_minute_df.iloc[[-1]].index.to_list()[0]}')

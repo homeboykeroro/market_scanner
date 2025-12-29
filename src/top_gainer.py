@@ -6,12 +6,12 @@ import pandas as pd
 import pytz
 import traceback
 
-from ibapi.contract import Contract
-
 from ib.ib_top_gainer_data import TopGainerData
 from ib.screener_filter import small_cap_pop_filter
 from notification.discord_client import MAIN_BOT, send_message
 from exception.connection_exception import ConnectionException
+
+from utils.previous_day_top_gainer_scraper import scrap_previous_day_top_gainer
 
 #from utils.logger import Logger
 
@@ -26,6 +26,9 @@ def main():
     top_gainer_data = None
     
     while True:
+        if (datetime.datetime.now().astimezone(pytz.timezone('US/Eastern')).time() > datetime.time(16, 0, 0)):
+            scrap_previous_day_top_gainer()
+        
         try:
             top_gainer_screener = TopGainerData()
             current_top_gainer_screener_client_id = random.randint(1, 100)

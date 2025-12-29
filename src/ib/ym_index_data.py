@@ -9,6 +9,7 @@ from exception.connection_exception import ConnectionException
 
 from utils.dataframe_util import append_customised_indicator
 from pattern.indice_pop import analyse_index_pop
+from pattern.indice_dip import analyse_index_dip
 from utils.logger import Logger
 
 #logger = Logger()
@@ -115,6 +116,7 @@ class DowJonesIndexData(EClient, EWrapper):
             complete_ym_minute_df = append_customised_indicator(concat_ym_minute_df)
             complete_ym_daily_df = append_customised_indicator(concat_ym_daily_df)
             analyse_index_pop(complete_ym_minute_df, complete_ym_daily_df, 'YM')
+            analyse_index_dip(complete_ym_minute_df, complete_ym_daily_df, 'YM')
             self.initialise()
             print(f'clientID: {self.clientId}, completed YM minute candle start: {complete_ym_minute_df.iloc[[0]].index.to_list()[0]}, end: {complete_ym_minute_df.iloc[[-1]].index.to_list()[0]}')
             print(f'clientID: {self.clientId}, completed YM daily candle range: {complete_ym_daily_df.index.tolist()}')

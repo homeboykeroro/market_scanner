@@ -52,11 +52,12 @@ class SP500IndexData(EClient, EWrapper):
             connect_success_msg = f'reqId: {reqId}, TWS Connection Success, errorCode: {errorCode}, message: {errorString}'
         elif errorCode in bypass_fatal_error_code_list:
             bypass_error_msg = f'reqId: {reqId}, By pass TWS error, errorCode: {errorCode}, message: {errorString}'
+            print(bypass_error_msg)
         elif errorCode in connection_error_code_list:
             connect_fail_msg = f'reqId: {reqId}, TWS Connection Error, errorCode: {errorCode}, message: {errorString}'
             raise ConnectionException(connect_fail_msg)
         else:
-            if errorCode == -1 or errorCode == 502:
+            if errorCode == -1 or errorCode == 502 or errorCode == 504:
                 connect_fail_msg = f'reqId: {reqId}, TWS Connection Error, errorCode: {errorCode}, message: {errorString}'
                 raise ConnectionException(connect_fail_msg)
             

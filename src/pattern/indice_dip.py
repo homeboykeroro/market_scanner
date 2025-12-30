@@ -15,7 +15,7 @@ from database.sqlite_connector import execute_in_transaction
 idx = pd.IndexSlice
 #logger = Logger()
  
-MIN_INDEX_CLOSE_PCT = -0.02 #for dip 0.01
+MIN_INDEX_CLOSE_PCT = -0.03 #for dip 0.01
 INDEX_TOP_N_VOLUME = 10
 MIN_MARUBOZU_RATIO = 40
 HIT_SCANNER_VALID_PERIOD_IN_MIN = 10

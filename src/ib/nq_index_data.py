@@ -58,7 +58,8 @@ class NasdaqIndexData(EClient, EWrapper):
             connect_fail_msg = f'reqId: {reqId}, TWS Connection Error, errorCode: {errorCode}, message: {errorString}'
             raise ConnectionException(connect_fail_msg)
         else:
-            if errorCode == -1 or errorCode == 502 or errorCode == 504:
+            #438 - application is locked
+            if errorCode == -1 or errorCode == 502 or errorCode == 504 or errorCode == 438:
                 connect_fail_msg = f'reqId: {reqId}, TWS Connection Error, errorCode: {errorCode}, message: {errorString}'
                 raise ConnectionException(connect_fail_msg)
             

@@ -1,6 +1,7 @@
 import datetime
 import threading
 import pandas as pd
+import pytz
 
 from ibapi.client import *
 from ibapi.wrapper import *
@@ -10,7 +11,7 @@ from exception.connection_exception import ConnectionException
 from utils.dataframe_util import append_customised_indicator
 from pattern.indice_pop import analyse_index_pop
 from pattern.indice_dip import analyse_index_dip
-from utils.logger import Logger
+#from utils.logger import Logger
 
 #logger = Logger()
 
@@ -101,6 +102,10 @@ class DowJonesIndexData(EClient, EWrapper):
             #logger.log_debug_msg(f'clientID: {self.clientId}, YM daily candle, start: {start}, end: {end}')
             self.daily_data_fetched = True
         
+        us_current_datetime = datetime.datetime.now().astimezone(pytz.timezone('US/Eastern'))
+        premarket_start_time = us_current_datetime.replace(day=us_current_datetime.day - 1, hour=16, minute=0, second=0) if datetime.time(0, 0, 0) < us_current_datetime.time() < datetime.time(4, 0, 0) else us_current_datetime.replace(hour=4, minute=0, second=0)
+        premarket_start_time = premarket_start_time.strftime('%Y-%m-%d %H:%M:%S')
+        
         if self.ym_futures_df_dict and self.ym_futures_previous_day_df_dict:
             ym_minute_df_list = []
             ym_daily_df_list = []
@@ -114,6 +119,9 @@ class DowJonesIndexData(EClient, EWrapper):
                 ym_daily_df_list.append(ym_daily_df)
                 
             concat_ym_daily_df = pd.concat(ym_daily_df_list, axis=0)
+            concat_ym_daily_df = concat_ym_daily_df.loc[premarket_start_time:, :]
+            print(f'YM futures concat minute candle start datetime: {concat_ym_daily_df.iloc[[0]].index[0]}, end datetime: {concat_ym_daily_df.iloc[[-1]].index[0]}')
+            
             complete_ym_minute_df = append_customised_indicator(concat_ym_minute_df)
             complete_ym_daily_df = append_customised_indicator(concat_ym_daily_df)
             analyse_index_pop(complete_ym_minute_df, complete_ym_daily_df, 'YM')

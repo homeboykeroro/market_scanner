@@ -1,6 +1,7 @@
 import datetime
 import threading
 import pandas as pd
+import pytz
 
 from ibapi.client import *
 from ibapi.wrapper import *
@@ -10,7 +11,7 @@ from exception.connection_exception import ConnectionException
 from utils.dataframe_util import append_customised_indicator
 from pattern.indice_pop import analyse_index_pop
 from pattern.indice_dip import analyse_index_dip
-from utils.logger import Logger
+#from utils.logger import Logger
 
 #logger = Logger('nasdaq')
 
@@ -101,6 +102,10 @@ class NasdaqIndexData(EClient, EWrapper):
             #logger.log_debug_msg(f'clientID: {self.clientId}, NQ daily candle, start: {start}, end: {end}')
             self.daily_data_fetched = True
             
+        us_current_datetime = datetime.datetime.now().astimezone(pytz.timezone('US/Eastern'))
+        premarket_start_time = us_current_datetime.replace(day=us_current_datetime.day - 1, hour=16, minute=0, second=0) if datetime.time(0, 0, 0) < us_current_datetime.time() < datetime.time(4, 0, 0) else us_current_datetime.replace(hour=4, minute=0, second=0)
+        premarket_start_time = premarket_start_time.strftime('%Y-%m-%d %H:%M:%S')
+        
         if self.minute_data_fetched and self.daily_data_fetched:
             nq_minute_df_list = []
             nq_daily_df_list = []
@@ -109,6 +114,8 @@ class NasdaqIndexData(EClient, EWrapper):
                 nq_minute_df_list.append(nq_minute_df)
             
             concat_nq_minute_df = pd.concat(nq_minute_df_list, axis=0)
+            concat_nq_minute_df = concat_nq_minute_df.loc[premarket_start_time:, :]
+            print(f'NQ futures concat minute candle start datetime: {concat_nq_minute_df.iloc[[0]].index[0]}, end datetime: {concat_nq_minute_df.iloc[[-1]].index[0]}')
             
             for dt, nq_daily_df in self.nq_futures_previous_day_df_dict.items():
                 nq_daily_df_list.append(nq_daily_df)

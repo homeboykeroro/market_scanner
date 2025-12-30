@@ -9,6 +9,7 @@ from ibapi.wrapper import *
 from exception.connection_exception import ConnectionException
 
 from utils.dataframe_util import append_customised_indicator
+from utils.datetime_util import convert_to_eastern
 from pattern.indice_pop import analyse_index_pop
 from pattern.indice_dip import analyse_index_dip
 #from utils.logger import Logger
@@ -72,25 +73,26 @@ class NasdaqIndexData(EClient, EWrapper):
         low = bar.low
         close = bar.close
         volume = bar.volume
-        dt = bar.date.replace(" US/Eastern", "")
-
-        if reqId == 10000:
-            formated_dt = datetime.datetime.strptime(dt, '%Y%m%d %H:%M:%S').strftime('%Y-%m-%d %H:%M:%S')
+        
+        if 'US/Central' in bar.date or 'US/Eastern' in bar.date:
+            dt = convert_to_eastern(bar.date)
+            dt = dt.replace(" US/Eastern", "")
+        else:
+            dt = datetime.datetime.strptime(bar.date, '%Y%m%d').strftime('%Y-%m-%d')
             
+        if reqId == 10000:
             ohlcv_list = []
             ohlcv_list.append([open, high, low, close, volume])
             ticker_to_indicator_column = pd.MultiIndex.from_product([['NQ'], ['Open', 'High', 'Low', 'Close', 'Volume']])
-            single_ticker_candle_df = pd.DataFrame(ohlcv_list, columns=ticker_to_indicator_column, index=[formated_dt])
-            self.nq_futures_df_dict[formated_dt] = single_ticker_candle_df 
+            single_ticker_candle_df = pd.DataFrame(ohlcv_list, columns=ticker_to_indicator_column, index=[dt])
+            self.nq_futures_df_dict[dt] = single_ticker_candle_df 
             
         if reqId == 11000:
-            formated_dt = datetime.datetime.strptime(dt, '%Y%m%d').strftime('%Y-%m-%d')
-            
             ohlcv_list = []
             ohlcv_list.append([open, high, low, close, volume])
             ticker_to_indicator_column = pd.MultiIndex.from_product([['NQ'], ['Open', 'High', 'Low', 'Close', 'Volume']])
-            single_ticker_candle_df = pd.DataFrame(ohlcv_list, columns=ticker_to_indicator_column, index=[formated_dt])
-            self.nq_futures_previous_day_df_dict[formated_dt] = single_ticker_candle_df
+            single_ticker_candle_df = pd.DataFrame(ohlcv_list, columns=ticker_to_indicator_column, index=[dt])
+            self.nq_futures_previous_day_df_dict[dt] = single_ticker_candle_df
             
     #Marks the ending of historical bars reception.
     def historicalDataEnd(self, reqId: int, start: str, end: str):

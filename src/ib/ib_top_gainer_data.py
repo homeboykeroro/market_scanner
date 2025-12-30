@@ -129,14 +129,14 @@ class TopGainerData(EClient, EWrapper):
                 
                 #ensure the minute candle dataframe start datetime is premarket datetime
                 single_ticker_minute_df = single_ticker_minute_df.loc[premarket_start_time:, :]
-                print(f'{single_ticker_minute_df.columns.get_level_values(0)[0]} concat minute candle start datetime: {single_ticker_minute_df.columns.iloc[[0]].index[0]}, end datetime: {single_ticker_minute_df.columns.iloc[[-1]].index[0]}')
+                print(f'{single_ticker_minute_df.columns.get_level_values(0)[0]} concat minute candle start datetime: {single_ticker_minute_df.iloc[[0]].index[0]}, end datetime: {single_ticker_minute_df.iloc[[-1]].index[0]}')
 
                 ticker_minute_df_list.append(single_ticker_minute_df)
             
             complete_minute_df = pd.concat(ticker_minute_df_list, axis=1)
             complete_minute_df = append_customised_indicator(complete_minute_df)
             
-            print(f'{single_ticker_minute_df.columns.get_level_values(0)[0]} complete minute candle start datetime: {single_ticker_minute_df.columns.iloc[[0]].index[0]}, end datetime: {single_ticker_minute_df.columns.iloc[[-1]].index[0]}')
+            print(f'{single_ticker_minute_df.columns.get_level_values(0)[0]} complete minute candle start datetime: {single_ticker_minute_df.iloc[[0]].index[0]}, end datetime: {single_ticker_minute_df.iloc[[-1]].index[0]}')
             
             #debug
             # with pd.option_context('display.max_rows', None,

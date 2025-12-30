@@ -25,7 +25,7 @@ def analyse_yesterday_bullish_daily_candle(minute_df, daily_df) -> None:
         return
 
     top_gainer_ticker_list = list(set(minute_df.columns.get_level_values(0).to_list()))
-    latest_minute_date = minute_df.iloc[[-1]].index.tolist()[0].strftime('%Y-%m-%d')
+    latest_minute_date = minute_df.iloc[[-1]].index.tolist()[0].rsplit(" ")[0]
     print(f'yesterday bullish daily candle latest_minute_date: {latest_minute_date}')
     filtered_ticker_list = []
     
@@ -47,7 +47,7 @@ def analyse_yesterday_bullish_daily_candle(minute_df, daily_df) -> None:
         return
     
     after_hour_start_datetime = latest_minute_date + ' ' + '16:00:00'
-    after_hour_end_datetime =  latest_minute_date + ' ' + '23:59:00'
+    after_hour_end_datetime =  minute_df.iloc[[-1]].index[0]
     afterhour_minute_df = minute_df.loc[after_hour_start_datetime:after_hour_end_datetime, idx[filtered_ticker_list], :]
     print(f'Yesterday bullish daily candle select afterhour start datetime: {after_hour_start_datetime}, afterhour end datetime: {after_hour_end_datetime}')
 

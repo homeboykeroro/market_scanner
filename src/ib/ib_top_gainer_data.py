@@ -130,7 +130,13 @@ class TopGainerData(EClient, EWrapper):
                 #ensure the minute candle dataframe start datetime is premarket datetime
                 single_ticker_minute_df = single_ticker_minute_df.loc[premarket_start_time:, :]
                 print(f'{single_ticker_minute_df.columns.get_level_values(0)[0]} concat minute candle start datetime: {single_ticker_minute_df.iloc[[0]].index[0]}, end datetime: {single_ticker_minute_df.iloc[[-1]].index[0]}')
-
+                
+                #reindex to unify all minute candle dataframes have same dimension
+                #even though get error in current datetime difference, should be 1 minute at most
+                datetime_range_index = pd.date_range(start=premarket_start_time, end=us_current_datetime.strftime('%Y-%m-%d %H:%M:%S'), freq='1min').strftime('%Y-%m-%d %H:%M:%S')
+                single_ticker_minute_df.reindex(datetime_range_index)
+                print(f'{single_ticker_minute_df.columns.get_level_values(0)[0]} reindexed concat minute candle start datetime: {single_ticker_minute_df.iloc[[0]].index[0]}, end datetime: {single_ticker_minute_df.iloc[[-1]].index[0]}')
+                
                 ticker_minute_df_list.append(single_ticker_minute_df)
             
             complete_minute_df = pd.concat(ticker_minute_df_list, axis=1)

@@ -57,6 +57,10 @@ def main():
                 os.system('cls')
                 print(f'TWS API Connection Lost, Cause: {e}')
                 print('Re-establishing S&P500 scanner connection due to connectivity issue')
+                print('Disconnecting...')
+                es_data.disconnect()
+                es_data.data_finished.set()
+                print('Terminate TWS thread...')
                 #logger.log_debug_msg('Re-establishing S&P500 scanner connection due to connectivity issue')
                 send_message(channel=MAIN_BOT, message='Re-establishing S&P500 scanner connection due to connectivity issue', tts=True)
             else:

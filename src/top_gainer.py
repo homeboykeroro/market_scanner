@@ -82,6 +82,12 @@ def main():
                 os.system('cls')
                 print(f'TWS API Connection Lost, Cause: {e}')
                 print('Re-establishing top gainer scanner connection due to connectivity issue')
+                print('Disconnecting...')
+                top_gainer_screener.disconnect()
+                top_gainer_screener.data_finished.set()
+                top_gainer_data.disconnect()
+                top_gainer_data.data_finished.set()
+                print('Terminate TWS thread...')
                 #logger.log_debug_msg('Re-establishing top gainer scanner connection due to connectivity issue')
                 send_message(channel=MAIN_BOT, message='Re-establishing top gainer scanner connection due to connectivity issue', tts=True)
             else:

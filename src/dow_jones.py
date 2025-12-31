@@ -58,6 +58,10 @@ def main():
                 print(f'TWS API Connection Lost, Cause: {e}')
                 print('Re-establishing Dow Jones scanner connection due to connectivity issue')
                 #logger.log_debug_msg('Re-establishing Dow Jones scanner connection due to connectivity issue')
+                print('Disconnecting...')
+                ym_data.disconnect()
+                ym_data.data_finished.set()
+                print('Terminate TWS thread...')
                 send_message(channel=MAIN_BOT, message='Re-establishing Dow Jones scanner connection due to connectivity issue', tts=True)
             else:
                 sleep_time = 10

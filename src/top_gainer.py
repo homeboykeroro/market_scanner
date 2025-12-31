@@ -1,5 +1,5 @@
 import datetime
-import random
+import os
 import threading
 import time
 import pandas as pd
@@ -20,9 +20,7 @@ idx = pd.IndexSlice
 
 def main():
     send_message(channel=MAIN_BOT, message='top gainer scanner connection success', tts=True)
-    current_top_gainer_screener_client_id = None
     top_gainer_screener = None
-    current_top_gainer_data_client_id = None
     top_gainer_data = None
     
     while True:
@@ -31,9 +29,8 @@ def main():
         
         try:
             top_gainer_screener = TopGainerData()
-            current_top_gainer_screener_client_id = random.randint(1, 100)
-            print(f'Create TWS connection for top gainer screener, clientID: {current_top_gainer_screener_client_id}')
-            top_gainer_screener.connect('127.0.0.1', 8888, current_top_gainer_screener_client_id)
+            print(f'Create TWS connection for top gainer screener, clientID: 10')
+            top_gainer_screener.connect('127.0.0.1', 8888, 10)
             api_thread = threading.Thread(target=top_gainer_screener.run, daemon=True)
             api_thread.start()
 
@@ -48,9 +45,8 @@ def main():
             print('Top gainer screener completed scanning')
             
             top_gainer_data = TopGainerData()
-            current_top_gainer_data_client_id = random.randint(200, 300)
-            print(f'Create TWS connection for top gainer data, clientID: {current_top_gainer_data_client_id}')
-            top_gainer_data.connect('127.0.0.1', 8888, current_top_gainer_data_client_id)
+            print(f'Create TWS connection for top gainer data, clientID: 11')
+            top_gainer_data.connect('127.0.0.1', 8888, 11)
             api_thread = threading.Thread(target=top_gainer_data.run, daemon=True)
             api_thread.start()
 
@@ -83,7 +79,7 @@ def main():
             if isinstance(e, ConnectionException):
                 sleep_time = 180
 
-                #os.system('cls')
+                os.system('cls')
                 print(f'TWS API Connection Lost, Cause: {e}')
                 print('Re-establishing top gainer scanner connection due to connectivity issue')
                 #logger.log_debug_msg('Re-establishing top gainer scanner connection due to connectivity issue')
@@ -91,7 +87,7 @@ def main():
             else:
                 sleep_time = 10
 
-                #os.system('cls')
+                os.system('cls')
                 print(traceback.format_exc())
                 print(f'Fatal Error, Cause: {e}')
                 print('Re-establishing top gainer scanner connection due to fatal error')

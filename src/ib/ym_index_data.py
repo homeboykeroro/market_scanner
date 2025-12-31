@@ -9,6 +9,7 @@ from ibapi.wrapper import *
 from exception.connection_exception import ConnectionException
 
 from utils.dataframe_util import append_customised_indicator
+from utils.datetime_util import convert_to_eastern
 from pattern.indice_pop import analyse_index_pop
 from pattern.indice_dip import analyse_index_dip
 #from utils.logger import Logger
@@ -58,6 +59,7 @@ class DowJonesIndexData(EClient, EWrapper):
             connect_fail_msg = f'reqId: {reqId}, TWS Connection Error, errorCode: {errorCode}, message: {errorString}'
             raise ConnectionException(connect_fail_msg)
         else:
+            #438 - application is locked
             if errorCode == -1 or errorCode == 502 or errorCode == 504 or errorCode == 438:
                 connect_fail_msg = f'reqId: {reqId}, TWS Connection Error, errorCode: {errorCode}, message: {errorString}'
                 raise ConnectionException(connect_fail_msg)
@@ -71,25 +73,26 @@ class DowJonesIndexData(EClient, EWrapper):
         low = bar.low
         close = bar.close
         volume = bar.volume
-        dt = bar.date.replace(" US/Eastern", "")
-
+        
+        if 'US/Central' in bar.date or 'US/Eastern' in bar.date:
+            dt = convert_to_eastern(bar.date)
+            dt = dt.replace(" US/Eastern", "")
+        else:
+            dt = datetime.datetime.strptime(bar.date, '%Y%m%d').strftime('%Y-%m-%d')
+        
         if reqId == 30000:
-            formated_dt = datetime.datetime.strptime(dt, '%Y%m%d %H:%M:%S').strftime('%Y-%m-%d %H:%M:%S')
-            
             ohlcv_list = []
             ohlcv_list.append([open, high, low, close, volume])
             ticker_to_indicator_column = pd.MultiIndex.from_product([['YM'], ['Open', 'High', 'Low', 'Close', 'Volume']])
-            single_ticker_candle_df = pd.DataFrame(ohlcv_list, columns=ticker_to_indicator_column, index=[formated_dt])
-            self.ym_futures_df_dict[formated_dt] = single_ticker_candle_df 
+            single_ticker_candle_df = pd.DataFrame(ohlcv_list, columns=ticker_to_indicator_column, index=[dt])
+            self.ym_futures_df_dict[dt] = single_ticker_candle_df 
             
         if reqId == 31000:
-            formated_dt = datetime.datetime.strptime(dt, '%Y%m%d').strftime('%Y-%m-%d')
-            
             ohlcv_list = []
             ohlcv_list.append([open, high, low, close, volume])
             ticker_to_indicator_column = pd.MultiIndex.from_product([['YM'], ['Open', 'High', 'Low', 'Close', 'Volume']])
-            single_ticker_candle_df = pd.DataFrame(ohlcv_list, columns=ticker_to_indicator_column, index=[formated_dt])
-            self.ym_futures_previous_day_df_dict[formated_dt] = single_ticker_candle_df
+            single_ticker_candle_df = pd.DataFrame(ohlcv_list, columns=ticker_to_indicator_column, index=[dt])
+            self.ym_futures_previous_day_df_dict[dt] = single_ticker_candle_df
             
     #Marks the ending of historical bars reception.
     def historicalDataEnd(self, reqId: int, start: str, end: str):
@@ -106,7 +109,7 @@ class DowJonesIndexData(EClient, EWrapper):
         premarket_start_time = us_current_datetime.replace(day=us_current_datetime.day - 1, hour=16, minute=0, second=0) if datetime.time(0, 0, 0) < us_current_datetime.time() < datetime.time(4, 0, 0) else us_current_datetime.replace(hour=4, minute=0, second=0)
         premarket_start_time = premarket_start_time.strftime('%Y-%m-%d %H:%M:%S')
         
-        if self.ym_futures_df_dict and self.ym_futures_previous_day_df_dict:
+        if self.minute_data_fetched and self.daily_data_fetched:
             ym_minute_df_list = []
             ym_daily_df_list = []
             
@@ -114,14 +117,13 @@ class DowJonesIndexData(EClient, EWrapper):
                 ym_minute_df_list.append(ym_minute_df)
             
             concat_ym_minute_df = pd.concat(ym_minute_df_list, axis=0)
+            concat_ym_minute_df = concat_ym_minute_df.loc[premarket_start_time:, :]
+            print(f'YM futures concat minute candle start datetime: {concat_ym_minute_df.iloc[[0]].index[0]}, end datetime: {concat_ym_minute_df.iloc[[-1]].index[0]}')
             
             for dt, ym_daily_df in self.ym_futures_previous_day_df_dict.items():
                 ym_daily_df_list.append(ym_daily_df)
                 
             concat_ym_daily_df = pd.concat(ym_daily_df_list, axis=0)
-            concat_ym_daily_df = concat_ym_daily_df.loc[premarket_start_time:, :]
-            print(f'YM futures concat minute candle start datetime: {concat_ym_daily_df.iloc[[0]].index[0]}, end datetime: {concat_ym_daily_df.iloc[[-1]].index[0]}')
-            
             complete_ym_minute_df = append_customised_indicator(concat_ym_minute_df)
             complete_ym_daily_df = append_customised_indicator(concat_ym_daily_df)
             analyse_index_pop(complete_ym_minute_df, complete_ym_daily_df, 'YM')

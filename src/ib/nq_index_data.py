@@ -79,7 +79,7 @@ class NasdaqIndexData(EClient, EWrapper):
             dt = dt.replace(" US/Eastern", "")
         else:
             dt = datetime.datetime.strptime(bar.date, '%Y%m%d').strftime('%Y-%m-%d')
-            
+
         if reqId == 10000:
             ohlcv_list = []
             ohlcv_list.append([open, high, low, close, volume])
@@ -104,7 +104,7 @@ class NasdaqIndexData(EClient, EWrapper):
             print(f'clientID: {self.clientId}, NQ daily candle, start: {start}, end: {end}') 
             #logger.log_debug_msg(f'clientID: {self.clientId}, NQ daily candle, start: {start}, end: {end}')
             self.daily_data_fetched = True
-            
+        
         us_current_datetime = datetime.datetime.now().astimezone(pytz.timezone('US/Eastern'))
         premarket_start_time = us_current_datetime.replace(day=us_current_datetime.day - 1, hour=16, minute=0, second=0) if datetime.time(0, 0, 0) < us_current_datetime.time() < datetime.time(4, 0, 0) else us_current_datetime.replace(hour=4, minute=0, second=0)
         premarket_start_time = premarket_start_time.strftime('%Y-%m-%d %H:%M:%S')

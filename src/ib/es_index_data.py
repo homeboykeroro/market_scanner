@@ -9,6 +9,7 @@ from ibapi.wrapper import *
 from exception.connection_exception import ConnectionException
 
 from utils.dataframe_util import append_customised_indicator
+from utils.datetime_util import convert_to_eastern
 from pattern.indice_pop import analyse_index_pop
 from pattern.indice_dip import analyse_index_dip
 #from utils.logger import Logger
@@ -74,25 +75,26 @@ class SP500IndexData(EClient, EWrapper):
         low = bar.low
         close = bar.close
         volume = bar.volume
-        dt = bar.date.replace(" US/Eastern", "")
+        
+        if 'US/Central' in bar.date or 'US/Eastern' in bar.date:
+            dt = convert_to_eastern(bar.date)
+            dt = dt.replace(" US/Eastern", "")
+        else:
+            dt = datetime.datetime.strptime(bar.date, '%Y%m%d').strftime('%Y-%m-%d')
 
         if reqId == 20000:
-            formated_dt = datetime.datetime.strptime(dt, '%Y%m%d %H:%M:%S').strftime('%Y-%m-%d %H:%M:%S')
-            
             ohlcv_list = []
             ohlcv_list.append([open, high, low, close, volume])
             ticker_to_indicator_column = pd.MultiIndex.from_product([['ES'], ['Open', 'High', 'Low', 'Close', 'Volume']])
-            single_ticker_candle_df = pd.DataFrame(ohlcv_list, columns=ticker_to_indicator_column, index=[formated_dt])
-            self.es_futures_df_dict[formated_dt] = single_ticker_candle_df 
+            single_ticker_candle_df = pd.DataFrame(ohlcv_list, columns=ticker_to_indicator_column, index=[dt])
+            self.es_futures_df_dict[dt] = single_ticker_candle_df 
             
         if reqId == 21000:
-            formated_dt = datetime.datetime.strptime(dt, '%Y%m%d').strftime('%Y-%m-%d')
-            
             ohlcv_list = []
             ohlcv_list.append([open, high, low, close, volume])
             ticker_to_indicator_column = pd.MultiIndex.from_product([['ES'], ['Open', 'High', 'Low', 'Close', 'Volume']])
-            single_ticker_candle_df = pd.DataFrame(ohlcv_list, columns=ticker_to_indicator_column, index=[formated_dt])
-            self.es_futures_previous_day_df_dict[formated_dt] = single_ticker_candle_df
+            single_ticker_candle_df = pd.DataFrame(ohlcv_list, columns=ticker_to_indicator_column, index=[dt])
+            self.es_futures_previous_day_df_dict[dt] = single_ticker_candle_df
             
     #Marks the ending of historical bars reception.
     def historicalDataEnd(self, reqId: int, start: str, end: str):
@@ -108,7 +110,7 @@ class SP500IndexData(EClient, EWrapper):
         us_current_datetime = datetime.datetime.now().astimezone(pytz.timezone('US/Eastern'))
         premarket_start_time = us_current_datetime.replace(day=us_current_datetime.day - 1, hour=16, minute=0, second=0) if datetime.time(0, 0, 0) < us_current_datetime.time() < datetime.time(4, 0, 0) else us_current_datetime.replace(hour=4, minute=0, second=0)
         premarket_start_time = premarket_start_time.strftime('%Y-%m-%d %H:%M:%S')
-          
+        
         if self.minute_data_fetched and self.daily_data_fetched:
             es_minute_df_list = []
             es_daily_df_list = []

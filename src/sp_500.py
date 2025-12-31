@@ -1,5 +1,5 @@
 import datetime
-import random
+import os
 import threading
 import time
 import pandas as pd
@@ -19,15 +19,13 @@ idx = pd.IndexSlice
 
 def main():
     send_message(channel=MAIN_BOT, message='S&P500 scanner connection success', tts=True)
-    current_client_id = None
     es_data = None
     
     while True:
         try:
             es_data = SP500IndexData()
-            current_client_id = random.randint(2000, 2999)
-            print(f'Create TWS connection, clientID: {current_client_id}')
-            es_data.connect('127.0.0.1', 8888, current_client_id)
+            print(f'Create TWS connection, clientID: 2')
+            es_data.connect('127.0.0.1', 8888, 2)
             api_thread = threading.Thread(target=es_data.run, daemon=True)
             api_thread.start()
 
@@ -46,7 +44,7 @@ def main():
             if timeframe_interval < 1:
                 print('Timeframe interval less than 1 minute')
                 return
-            
+
             es_data.reqHistoricalData(20000, es_contract, '', f'{str(int(timeframe_interval * 60))} S', '1 min', 'TRADES', 0, 1, False, [])
             es_data.reqHistoricalData(21000, es_contract, '', '2 D', '1 day', 'TRADES', 1, 1, False, [])
             es_data.data_finished.wait()
@@ -56,7 +54,7 @@ def main():
             if isinstance(e, ConnectionException):
                 sleep_time = 180
 
-                #os.system('cls')
+                os.system('cls')
                 print(f'TWS API Connection Lost, Cause: {e}')
                 print('Re-establishing S&P500 scanner connection due to connectivity issue')
                 #logger.log_debug_msg('Re-establishing S&P500 scanner connection due to connectivity issue')
@@ -64,7 +62,7 @@ def main():
             else:
                 sleep_time = 10
 
-                #os.system('cls')
+                os.system('cls')
                 print(traceback.format_exc())
                 print(f'Fatal Error, Cause: {e}')
                 print('Re-establishing S&P500 scanner connection due to fatal error')

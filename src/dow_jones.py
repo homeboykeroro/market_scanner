@@ -1,5 +1,5 @@
 import datetime
-import random
+import os
 import threading
 import time
 import pandas as pd
@@ -19,15 +19,13 @@ idx = pd.IndexSlice
 
 def main():
     send_message(channel=MAIN_BOT, message='Dow Jones scanner connection success', tts=True)
-    current_client_id = None
     ym_data = None
     
     while True:
         try:
             ym_data = DowJonesIndexData()
-            current_client_id = random.randint(3000, 3999)
-            print(f'Create TWS connection, clientID: {current_client_id}')
-            ym_data.connect('127.0.0.1', 8888, current_client_id)
+            print(f'Create TWS connection, clientID: 3')
+            ym_data.connect('127.0.0.1', 8888, 3)
             api_thread = threading.Thread(target=ym_data.run, daemon=True)
             api_thread.start()
 
@@ -56,7 +54,7 @@ def main():
             if isinstance(e, ConnectionException):
                 sleep_time = 180
 
-                #os.system('cls')
+                os.system('cls')
                 print(f'TWS API Connection Lost, Cause: {e}')
                 print('Re-establishing Dow Jones scanner connection due to connectivity issue')
                 #logger.log_debug_msg('Re-establishing Dow Jones scanner connection due to connectivity issue')
@@ -64,7 +62,7 @@ def main():
             else:
                 sleep_time = 10
 
-                #os.system('cls')
+                os.system('cls')
                 print(traceback.format_exc())
                 print(f'Fatal Error, Cause: {e}')
                 print('Re-establishing Dow Jones scanner connection due to fatal error')

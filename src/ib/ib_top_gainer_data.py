@@ -134,7 +134,7 @@ class TopGainerData(EClient, EWrapper):
                 #reindex to unify all minute candle dataframes have same dimension
                 #even though get error in current datetime difference, should be 1 minute at most
                 datetime_range_index = pd.date_range(start=premarket_start_time, end=us_current_datetime.strftime('%Y-%m-%d %H:%M:%S'), freq='1min').strftime('%Y-%m-%d %H:%M:%S')
-                single_ticker_minute_df.reindex(datetime_range_index)
+                single_ticker_minute_df = single_ticker_minute_df.reindex(datetime_range_index).ffill()
                 print(f'{single_ticker_minute_df.columns.get_level_values(0)[0]} reindexed concat minute candle start datetime: {single_ticker_minute_df.iloc[[0]].index[0]}, end datetime: {single_ticker_minute_df.iloc[[-1]].index[0]}')
                 
                 ticker_minute_df_list.append(single_ticker_minute_df)
@@ -180,7 +180,7 @@ class TopGainerData(EClient, EWrapper):
             #     logger.log_debug_msg(complete_daily_df)
     
     def scannerData(self, reqId, rank, contractDetails, distance, benchmark, projection, legsStr):
-        # print(f"scannerData. reqId: {reqId}, rank: {rank}, contractDetails: {contractDetails}, distance: {distance}, benchmark: {benchmark}, projection: {projection}, legsStr: {legsStr}.")
+        print(f"scannerData. reqId: {reqId}, rank: {rank}, contractDetails: {contractDetails}, distance: {distance}, benchmark: {benchmark}, projection: {projection}, legsStr: {legsStr}.")
         if re.match('^[a-zA-Z]{1,4}$', contractDetails.contract.symbol): 
             self.small_cap_pop_contract_list.append(contractDetails.contract)
         

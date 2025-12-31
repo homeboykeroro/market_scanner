@@ -118,19 +118,17 @@ class DowJonesIndexData(EClient, EWrapper):
             
             concat_ym_minute_df = pd.concat(ym_minute_df_list, axis=0)
             concat_ym_minute_df = concat_ym_minute_df.loc[premarket_start_time:, :]
-            print(f'YM futures concat minute candle start datetime: {concat_ym_minute_df.iloc[[0]].index[0]}, end datetime: {concat_ym_minute_df.iloc[[-1]].index[0]}')
+            #reindex to unify all minute candle dataframes have same dimension
+            #even though get error in current datetime difference, should be 1 minute at most
+            datetime_range_index = pd.date_range(start=premarket_start_time, end=us_current_datetime.strftime('%Y-%m-%d %H:%M:%S'), freq='1min').strftime('%Y-%m-%d %H:%M:%S')
+            print(f'YM concat minute candle start datetime: {concat_ym_minute_df.iloc[[0]].index[0]}, end datetime: {concat_ym_minute_df.iloc[[-1]].index[0]}')
+            concat_ym_minute_df = concat_ym_minute_df.reindex(datetime_range_index).ffill()
+            print(f'YM reindexed concat minute candle start datetime: {concat_ym_minute_df.iloc[[0]].index[0]}, end datetime: {concat_ym_minute_df.iloc[[-1]].index[0]}')
             
             for dt, ym_daily_df in self.ym_futures_previous_day_df_dict.items():
                 ym_daily_df_list.append(ym_daily_df)
                 
             concat_ym_daily_df = pd.concat(ym_daily_df_list, axis=0)
-            
-            #reindex to unify all minute candle dataframes have same dimension
-            #even though get error in current datetime difference, should be 1 minute at most
-            datetime_range_index = pd.date_range(start=premarket_start_time, end=us_current_datetime.strftime('%Y-%m-%d %H:%M:%S'), freq='1min').strftime('%Y-%m-%d %H:%M:%S')
-            print(f'YM concat minute candle start datetime: {concat_ym_daily_df.iloc[[0]].index[0]}, end datetime: {concat_ym_daily_df.iloc[[-1]].index[0]}')
-            concat_ym_daily_df.reindex(datetime_range_index)
-            print(f'YM reindexed concat minute candle start datetime: {concat_ym_daily_df.iloc[[0]].index[0]}, end datetime: {concat_ym_daily_df.iloc[[-1]].index[0]}')
             
             complete_ym_minute_df = append_customised_indicator(concat_ym_minute_df)
             complete_ym_daily_df = append_customised_indicator(concat_ym_daily_df)

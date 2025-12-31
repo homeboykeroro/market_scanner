@@ -27,6 +27,7 @@ def main():
             print(f'Create TWS connection, clientID: 1')
             nq_data.connect('127.0.0.1', 8888, 1)
             api_thread = threading.Thread(target=nq_data.run, daemon=True)
+            api_thread.name = 'NQ'
             api_thread.start()
 
             # Wait for connection to establish (optional, but good practice)

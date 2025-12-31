@@ -27,6 +27,7 @@ def main():
             print(f'Create TWS connection, clientID: 3')
             ym_data.connect('127.0.0.1', 8888, 3)
             api_thread = threading.Thread(target=ym_data.run, daemon=True)
+            api_thread.name = 'YM'
             api_thread.start()
 
             # Wait for connection to establish (optional, but good practice)

@@ -118,19 +118,17 @@ class NasdaqIndexData(EClient, EWrapper):
             
             concat_nq_minute_df = pd.concat(nq_minute_df_list, axis=0)
             concat_nq_minute_df = concat_nq_minute_df.loc[premarket_start_time:, :]
-            print(f'NQ futures concat minute candle start datetime: {concat_nq_minute_df.iloc[[0]].index[0]}, end datetime: {concat_nq_minute_df.iloc[[-1]].index[0]}')
-            
+            #reindex to unify all minute candle dataframes have same dimension
+            #even though get error in current datetime difference, should be 1 minute at most
+            datetime_range_index = pd.date_range(start=premarket_start_time, end=us_current_datetime.strftime('%Y-%m-%d %H:%M:%S'), freq='1min').strftime('%Y-%m-%d %H:%M:%S')
+            print(f'NQ concat minute candle start datetime: {concat_nq_minute_df.iloc[[0]].index[0]}, end datetime: {concat_nq_minute_df.iloc[[-1]].index[0]}')
+            concat_nq_minute_df = concat_nq_minute_df.reindex(datetime_range_index).ffill()
+            print(f'NQ reindexed concat minute candle start datetime: {concat_nq_minute_df.iloc[[0]].index[0]}, end datetime: {concat_nq_minute_df.iloc[[-1]].index[0]}')
+
             for dt, nq_daily_df in self.nq_futures_previous_day_df_dict.items():
                 nq_daily_df_list.append(nq_daily_df)
                 
             concat_nq_daily_df = pd.concat(nq_daily_df_list, axis=0)
-            
-            #reindex to unify all minute candle dataframes have same dimension
-            #even though get error in current datetime difference, should be 1 minute at most
-            datetime_range_index = pd.date_range(start=premarket_start_time, end=us_current_datetime.strftime('%Y-%m-%d %H:%M:%S'), freq='1min').strftime('%Y-%m-%d %H:%M:%S')
-            print(f'NQ concat minute candle start datetime: {concat_nq_daily_df.iloc[[0]].index[0]}, end datetime: {concat_nq_daily_df.iloc[[-1]].index[0]}')
-            concat_nq_daily_df.reindex(datetime_range_index)
-            print(f'NQ reindexed concat minute candle start datetime: {concat_nq_daily_df.iloc[[0]].index[0]}, end datetime: {concat_nq_daily_df.iloc[[-1]].index[0]}')
             
             complete_nq_minute_df = append_customised_indicator(concat_nq_minute_df)
             complete_nq_daily_df = append_customised_indicator(concat_nq_daily_df)

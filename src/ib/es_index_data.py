@@ -120,20 +120,17 @@ class SP500IndexData(EClient, EWrapper):
             
             concat_es_minute_df = pd.concat(es_minute_df_list, axis=0)
             concat_es_minute_df = concat_es_minute_df.loc[premarket_start_time:, :]
-            print(f'ES futures concat minute candle start datetime: {concat_es_minute_df.iloc[[0]].index[0]}, end datetime: {concat_es_minute_df.iloc[[-1]].index[0]}')
+            #reindex to unify all minute candle dataframes have same dimension
+            #even though get error in current datetime difference, should be 1 minute at most
+            datetime_range_index = pd.date_range(start=premarket_start_time, end=us_current_datetime.strftime('%Y-%m-%d %H:%M:%S'), freq='1min').strftime('%Y-%m-%d %H:%M:%S')
+            print(f'ES concat minute candle start datetime: {concat_es_minute_df.iloc[[0]].index[0]}, end datetime: {concat_es_minute_df.iloc[[-1]].index[0]}')
+            concat_es_minute_df = concat_es_minute_df.reindex(datetime_range_index).ffill()
+            print(f'ES reindexed concat minute candle start datetime: {concat_es_minute_df.iloc[[0]].index[0]}, end datetime: {concat_es_minute_df.iloc[[-1]].index[0]}')
             
             for dt, es_daily_df in self.es_futures_previous_day_df_dict.items():
                 es_daily_df_list.append(es_daily_df)
                 
             concat_es_daily_df = pd.concat(es_daily_df_list, axis=0)
-            
-            #reindex to unify all minute candle dataframes have same dimension
-            #even though get error in current datetime difference, should be 1 minute at most
-            datetime_range_index = pd.date_range(start=premarket_start_time, end=us_current_datetime.strftime('%Y-%m-%d %H:%M:%S'), freq='1min').strftime('%Y-%m-%d %H:%M:%S')
-            print(f'ES concat minute candle start datetime: {concat_es_daily_df.iloc[[0]].index[0]}, end datetime: {concat_es_daily_df.iloc[[-1]].index[0]}')
-            concat_es_daily_df.reindex(datetime_range_index)
-            print(f'ES reindexed concat minute candle start datetime: {concat_es_daily_df.iloc[[0]].index[0]}, end datetime: {concat_es_daily_df.iloc[[-1]].index[0]}')
-            
             complete_es_minute_df = append_customised_indicator(concat_es_minute_df)
             complete_es_daily_df = append_customised_indicator(concat_es_daily_df)
             analyse_index_pop(complete_es_minute_df, complete_es_daily_df, 'ES')

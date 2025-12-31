@@ -27,6 +27,7 @@ def main():
             print(f'Create TWS connection, clientID: 2')
             es_data.connect('127.0.0.1', 8888, 2)
             api_thread = threading.Thread(target=es_data.run, daemon=True)
+            api_thread.name = 'ES'
             api_thread.start()
 
             # Wait for connection to establish (optional, but good practice)

@@ -9,7 +9,7 @@ from ibapi.wrapper import *
 from exception.connection_exception import ConnectionException
 
 from utils.dataframe_util import append_customised_indicator
-from utils.datetime_util import convert_to_eastern
+from utils.datetime_util import convert_to_eastern, get_us_business_day
 from pattern.indice_pop import analyse_index_pop
 from pattern.indice_dip import analyse_index_dip
 #from utils.logger import Logger
@@ -106,7 +106,8 @@ class NasdaqIndexData(EClient, EWrapper):
             self.daily_data_fetched = True
         
         us_current_datetime = datetime.datetime.now().astimezone(pytz.timezone('US/Eastern'))
-        premarket_start_time = us_current_datetime.replace(day=us_current_datetime.day - 1, hour=16, minute=0, second=0) if datetime.time(0, 0, 0) < us_current_datetime.time() < datetime.time(4, 0, 0) else us_current_datetime.replace(hour=4, minute=0, second=0)
+        previous_us_business_day = get_us_business_day(-1, us_current_datetime)
+        premarket_start_time = previous_us_business_day.replace(hour=16, minute=0, second=0) if datetime.time(0, 0, 0) < us_current_datetime.time() < datetime.time(4, 0, 0) else us_current_datetime.replace(hour=4, minute=0, second=0)
         premarket_start_time = premarket_start_time.strftime('%Y-%m-%d %H:%M:%S')
         
         if self.minute_data_fetched and self.daily_data_fetched:

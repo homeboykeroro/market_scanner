@@ -12,6 +12,8 @@ from ib.nq_index_data import NasdaqIndexData
 from notification.discord_client import MAIN_BOT, send_message
 from exception.connection_exception import ConnectionException
 
+from utils.datetime_util import get_us_business_day
+
 #from utils.logger import Logger
 
 #logger = Logger(filename='nasdaq')
@@ -39,8 +41,11 @@ def main():
             nq_contract.exchange = "CME"
             
             us_current_datetime = datetime.datetime.now().astimezone(pytz.timezone('US/Eastern'))
-            premarket_start_time = us_current_datetime.replace(day=us_current_datetime.day - 1, hour=16, minute=0, second=0) if datetime.time(0, 0, 0) < us_current_datetime.time() < datetime.time(4, 0, 0) else us_current_datetime.replace(hour=4, minute=0, second=0)
+            previous_us_business_day = get_us_business_day(-1, us_current_datetime)
+            print(f'previous US business day: {previous_us_business_day.strftime('%Y-%m-%d %H:%M:%S')}')
+            premarket_start_time = previous_us_business_day.replace(hour=16, minute=0, second=0) if datetime.time(0, 0, 0) < us_current_datetime.time() < datetime.time(4, 0, 0) else us_current_datetime.replace(hour=4, minute=0, second=0)
             timeframe_interval = int(((us_current_datetime - premarket_start_time).total_seconds()) / 60)
+            print(f'calculate time interval, start datetime: {premarket_start_time.strftime('%Y-%m-%d %H:%M:%S')}, end datetime: {us_current_datetime.strftime('%Y-%m-%d %H:%M:%S')}, time difference: {timeframe_interval}')
             
             if timeframe_interval < 1:
                 print('Timeframe interval less than 1 minute')

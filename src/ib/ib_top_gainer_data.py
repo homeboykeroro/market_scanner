@@ -180,7 +180,7 @@ class TopGainerData(EClient, EWrapper):
             #     logger.log_debug_msg(complete_daily_df)
     
     def scannerData(self, reqId, rank, contractDetails, distance, benchmark, projection, legsStr):
-        print(f"scannerData. reqId: {reqId}, rank: {rank}, contractDetails: {contractDetails}, distance: {distance}, benchmark: {benchmark}, projection: {projection}, legsStr: {legsStr}.")
+        #print(f"scannerData. reqId: {reqId}, rank: {rank}, contractDetails: {contractDetails}, distance: {distance}, benchmark: {benchmark}, projection: {projection}, legsStr: {legsStr}.")
         if re.match('^[a-zA-Z]{1,4}$', contractDetails.contract.symbol): 
             self.small_cap_pop_contract_list.append(contractDetails.contract)
         

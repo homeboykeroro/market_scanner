@@ -5,6 +5,7 @@ import time
 import pandas as pd
 import pytz
 import traceback
+import queue
 
 from ibapi.contract import Contract
 
@@ -23,9 +24,25 @@ def main():
     send_message(channel=MAIN_BOT, message='Nasdaq scanner connection success', tts=True)
     
     nq_data = NasdaqIndexData()
+    
+    def thread_target_with_exception_handling(target_func, result_queue):
+        """Wrapper that runs the target and puts any exception into the queue"""
+        try:
+            target_func()
+        except Exception as e:
+            # Capture full traceback
+            tb = traceback.format_exc()
+            result_queue.put(('error', e, tb))
+        else:
+            result_queue.put(('success', None, None))
+
+    # Usage
+    result_queue = queue.Queue()
+    
     print(f'Create TWS connection, clientID: 1')
     nq_data.connect('127.0.0.1', 8888, 1)
-    api_thread = threading.Thread(target=nq_data.run)
+    wrapped_target = lambda: thread_target_with_exception_handling(nq_data.run, result_queue)
+    api_thread = threading.Thread(target=wrapped_target)
     api_thread.name = 'NQ'    
     api_thread.start()
     # Wait for connection to establish (optional, but good practice)

@@ -19,20 +19,20 @@ idx = pd.IndexSlice
 
 def main():
     send_message(channel=MAIN_BOT, message='Dow Jones scanner connection success', tts=True)
-    ym_data = None
+    
+    ym_data = DowJonesIndexData()
+    print(f'Create TWS connection, clientID: 3')
+    ym_data.connect('127.0.0.1', 8888, 3)
+    api_thread = threading.Thread(target=ym_data.run)
+    api_thread.name = 'YM'
+    api_thread.start()
+    # Wait for connection to establish (optional, but good practice)
+    time.sleep(5) 
     
     while True:
         try:
-            ym_data = DowJonesIndexData()
-            print(f'Create TWS connection, clientID: 3')
-            ym_data.connect('127.0.0.1', 8888, 3)
-            api_thread = threading.Thread(target=ym_data.run, daemon=True)
-            api_thread.name = 'YM'
-            api_thread.start()
+            ym_data.data_finished.clear()
 
-            # Wait for connection to establish (optional, but good practice)
-            time.sleep(1) 
-    
             ym_contract = Contract()
             ym_contract.symbol = "YM"
             ym_contract.secType = "CONTFUT"
@@ -49,8 +49,7 @@ def main():
             ym_data.reqHistoricalData(30000, ym_contract, '', f'{str(int(timeframe_interval * 60))} S', '1 min', 'TRADES', 0, 1, False, [])
             ym_data.reqHistoricalData(31000, ym_contract, '', '2 D', '1 day', 'TRADES', 1, 1, False, [])
             ym_data.data_finished.wait()
-            print(f'Close TWS connection, clientID: {ym_data.clientId}')
-            ym_data.disconnect()
+            time.sleep(5)
         except Exception as e:
             if isinstance(e, ConnectionException):
                 sleep_time = 180
@@ -59,10 +58,7 @@ def main():
                 print(f'TWS API Connection Lost, Cause: {e}')
                 print('Re-establishing Dow Jones scanner connection due to connectivity issue')
                 #logger.log_debug_msg('Re-establishing Dow Jones scanner connection due to connectivity issue')
-                print('Disconnecting...')
-                ym_data.disconnect()
-                ym_data.data_finished.set()
-                print('Terminate TWS thread...')
+                ym_data.data_finished.clear()
                 send_message(channel=MAIN_BOT, message='Re-establishing Dow Jones scanner connection due to connectivity issue', tts=True)
             else:
                 sleep_time = 10

@@ -20,38 +20,35 @@ idx = pd.IndexSlice
 
 def main():
     send_message(channel=MAIN_BOT, message='top gainer scanner connection success', tts=True)
-    top_gainer_screener = None
-    top_gainer_data = None
+    
+    small_cap_pop_search_filter = small_cap_pop_filter()
+    top_gainer_screener = TopGainerData()
+    print(f'Create TWS connection for top gainer screener, clientID: 10')
+    top_gainer_screener.connect('127.0.0.1', 8888, 10)
+    api_thread = threading.Thread(target=top_gainer_screener.run, daemon=True)
+    api_thread.start()
+    # Wait for connection to establish (optional, but good practice)
+    time.sleep(5)
+    
+    top_gainer_data = TopGainerData()
+    print(f'Create TWS connection for top gainer data, clientID: 11')
+    top_gainer_data.connect('127.0.0.1', 8888, 11)
+    api_thread = threading.Thread(target=top_gainer_data.run)
+    api_thread.start()
+    # Wait for connection to establish (optional, but good practice)
+    time.sleep(5) 
     
     while True:
         if (datetime.datetime.now().astimezone(pytz.timezone('US/Eastern')).time() > datetime.time(16, 0, 0)):
             scrap_previous_day_top_gainer()
         
         try:
-            top_gainer_screener = TopGainerData()
-            print(f'Create TWS connection for top gainer screener, clientID: 10')
-            top_gainer_screener.connect('127.0.0.1', 8888, 10)
-            api_thread = threading.Thread(target=top_gainer_screener.run, daemon=True)
-            api_thread.start()
-
-            # Wait for connection to establish (optional, but good practice)
-            time.sleep(1) 
+            top_gainer_screener.screener_finished.clear()
+            top_gainer_data.data_finished.clear()
             
-            small_cap_pop_search_filter = small_cap_pop_filter()
             top_gainer_screener.reqScannerSubscription(1, small_cap_pop_search_filter, [], [])
             top_gainer_screener.screener_finished.wait()
-            print(f'Close TWS connection for top gainer screener, clientID: {top_gainer_screener.clientId}')
-            top_gainer_screener.disconnect()
             print('Top gainer screener completed scanning')
-            
-            top_gainer_data = TopGainerData()
-            print(f'Create TWS connection for top gainer data, clientID: 11')
-            top_gainer_data.connect('127.0.0.1', 8888, 11)
-            api_thread = threading.Thread(target=top_gainer_data.run, daemon=True)
-            api_thread.start()
-
-            # Wait for connection to establish (optional, but good practice)
-            time.sleep(1) 
             
             us_current_datetime = datetime.datetime.now().astimezone(pytz.timezone('US/Eastern'))
             premarket_start_time = us_current_datetime.replace(day=us_current_datetime.day - 1, hour=16, minute=0, second=0) if datetime.time(0, 0, 0) < us_current_datetime.time() < datetime.time(4, 0, 0) else us_current_datetime.replace(hour=4, minute=0, second=0)
@@ -69,12 +66,10 @@ def main():
                     top_gainer_data.reqHistoricalData((100 + rank), contract, '', f'{str(int(timeframe_interval * 60))} S', '1 min', 'TRADES', 0, 1, False, [])
                     top_gainer_data.reqHistoricalData((200 + rank), contract, '', '2 D', '1 day', 'TRADES', 1, 1, False, [])
                 top_gainer_data.data_finished.wait()
-                print(f'Close TWS connection for top gainer data, clientID: {top_gainer_data.clientId}')
-                top_gainer_data.disconnect()
             else:
                 print('No top gainer contract list found')
-                print(f'Close TWS connection for top gainer data, clientID: {top_gainer_data.clientId}')
-                top_gainer_data.disconnect()
+                
+            time.sleep(5)
         except Exception as e:
             if isinstance(e, ConnectionException):
                 sleep_time = 180
@@ -82,12 +77,6 @@ def main():
                 os.system('cls')
                 print(f'TWS API Connection Lost, Cause: {e}')
                 print('Re-establishing top gainer scanner connection due to connectivity issue')
-                print('Disconnecting...')
-                top_gainer_screener.disconnect()
-                top_gainer_screener.data_finished.set()
-                top_gainer_data.disconnect()
-                top_gainer_data.data_finished.set()
-                print('Terminate TWS thread...')
                 #logger.log_debug_msg('Re-establishing top gainer scanner connection due to connectivity issue')
                 send_message(channel=MAIN_BOT, message='Re-establishing top gainer scanner connection due to connectivity issue', tts=True)
             else:

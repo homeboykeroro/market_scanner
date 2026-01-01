@@ -19,20 +19,20 @@ idx = pd.IndexSlice
 
 def main():
     send_message(channel=MAIN_BOT, message='Nasdaq scanner connection success', tts=True)
-    nq_data = None
+    
+    nq_data = NasdaqIndexData()
+    print(f'Create TWS connection, clientID: 1')
+    nq_data.connect('127.0.0.1', 8888, 1)
+    api_thread = threading.Thread(target=nq_data.run)
+    api_thread.name = 'NQ'    
+    api_thread.start()
+    # Wait for connection to establish (optional, but good practice)
+    time.sleep(5) 
     
     while True:
         try:
-            nq_data = NasdaqIndexData()
-            print(f'Create TWS connection, clientID: 1')
-            nq_data.connect('127.0.0.1', 8888, 1)
-            api_thread = threading.Thread(target=nq_data.run, daemon=True)
-            api_thread.name = 'NQ'
-            api_thread.start()
-
-            # Wait for connection to establish (optional, but good practice)
-            time.sleep(1) 
-    
+            nq_data.data_finished.clear()
+            
             nq_contract = Contract()
             nq_contract.symbol = "NQ"
             nq_contract.secType = "CONTFUT"
@@ -49,8 +49,7 @@ def main():
             nq_data.reqHistoricalData(10000, nq_contract, '', f'{str(int(timeframe_interval * 60))} S', '1 min', 'TRADES', 0, 1, False, [])
             nq_data.reqHistoricalData(11000, nq_contract, '', '2 D', '1 day', 'TRADES', 1, 1, False, [])
             nq_data.data_finished.wait()
-            print(f'Close TWS connection, clientID: {nq_data.clientId}')
-            nq_data.disconnect()
+            time.sleep(5)
         except Exception as e:
             if isinstance(e, ConnectionException):
                 sleep_time = 180
@@ -59,10 +58,6 @@ def main():
                 print(f'TWS API Connection Lost, Cause: {e}')
                 print('Re-establishing Nasdaq scanner connection due to connectivity issue')
                 #logger.log_debug_msg('Re-establishing Nasdaq scanner connection due to connectivity issue')
-                print('Disconnecting...')
-                nq_data.disconnect()
-                nq_data.data_finished.set()
-                print('Terminate TWS thread...')
                 send_message(channel=MAIN_BOT, message='Re-establishing Nasdaq scanner connection due to connectivity issue', tts=True)
             else:
                 sleep_time = 10

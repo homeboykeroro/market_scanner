@@ -19,19 +19,19 @@ idx = pd.IndexSlice
 
 def main():
     send_message(channel=MAIN_BOT, message='S&P500 scanner connection success', tts=True)
-    es_data = None
+    
+    es_data = SP500IndexData()
+    print(f'Create TWS connection, clientID: 2')
+    es_data.connect('127.0.0.1', 8888, 2)
+    api_thread = threading.Thread(target=es_data.run)
+    api_thread.name = 'ES'
+    api_thread.start()
+    # Wait for connection to establish (optional, but good practice)
+    time.sleep(5) 
     
     while True:
         try:
-            es_data = SP500IndexData()
-            print(f'Create TWS connection, clientID: 2')
-            es_data.connect('127.0.0.1', 8888, 2)
-            api_thread = threading.Thread(target=es_data.run, daemon=True)
-            api_thread.name = 'ES'
-            api_thread.start()
-
-            # Wait for connection to establish (optional, but good practice)
-            time.sleep(1) 
+            es_data.data_finished.clear()
     
             es_contract = Contract()
             es_contract.symbol = "ES"
@@ -49,8 +49,7 @@ def main():
             es_data.reqHistoricalData(20000, es_contract, '', f'{str(int(timeframe_interval * 60))} S', '1 min', 'TRADES', 0, 1, False, [])
             es_data.reqHistoricalData(21000, es_contract, '', '2 D', '1 day', 'TRADES', 1, 1, False, [])
             es_data.data_finished.wait()
-            print(f'Close TWS connection, clientID: {es_data.clientId}')
-            es_data.disconnect()
+            time.sleep(5)
         except Exception as e:
             if isinstance(e, ConnectionException):
                 sleep_time = 180
@@ -58,10 +57,6 @@ def main():
                 os.system('cls')
                 print(f'TWS API Connection Lost, Cause: {e}')
                 print('Re-establishing S&P500 scanner connection due to connectivity issue')
-                print('Disconnecting...')
-                es_data.disconnect()
-                es_data.data_finished.set()
-                print('Terminate TWS thread...')
                 #logger.log_debug_msg('Re-establishing S&P500 scanner connection due to connectivity issue')
                 send_message(channel=MAIN_BOT, message='Re-establishing S&P500 scanner connection due to connectivity issue', tts=True)
             else:

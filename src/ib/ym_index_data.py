@@ -107,8 +107,9 @@ class DowJonesIndexData(EClient, EWrapper):
         
         us_current_datetime = datetime.datetime.now().astimezone(pytz.timezone('US/Eastern'))
         previous_us_business_day = get_us_business_day(-1, us_current_datetime)
-        premarket_start_time = previous_us_business_day.replace(hour=16, minute=0, second=0) if datetime.time(0, 0, 0) < us_current_datetime.time() < datetime.time(4, 0, 0) else us_current_datetime.replace(hour=4, minute=0, second=0)
-        premarket_start_time = premarket_start_time.strftime('%Y-%m-%d %H:%M:%S')
+        nearest_trading_day = get_us_business_day(0, us_current_datetime)
+        previous_day_premarket_start_time = previous_us_business_day.replace(hour=4, minute=0, second=0).strftime('%Y-%m-%d %H:%M:%S')
+        print(f'previous us business day: {previous_day_premarket_start_time},  nearest trading day: {nearest_trading_day}')
         
         if self.minute_data_fetched and self.daily_data_fetched:
             ym_minute_df_list = []
@@ -118,12 +119,12 @@ class DowJonesIndexData(EClient, EWrapper):
                 ym_minute_df_list.append(ym_minute_df)
             
             concat_ym_minute_df = pd.concat(ym_minute_df_list, axis=0)
-            concat_ym_minute_df = concat_ym_minute_df.loc[premarket_start_time:, :]
+            concat_ym_minute_df = concat_ym_minute_df.loc[previous_day_premarket_start_time:, :]
             #reindex to unify all minute candle dataframes have same dimension
             #even though get error in current datetime difference, should be 1 minute at most
-            datetime_range_index = pd.date_range(start=premarket_start_time, end=us_current_datetime.strftime('%Y-%m-%d %H:%M:%S'), freq='1min').strftime('%Y-%m-%d %H:%M:%S')
+            datetime_range_index = pd.date_range(start=previous_day_premarket_start_time, end=nearest_trading_day.strftime('%Y-%m-%d %H:%M:%S'), freq='1min').strftime('%Y-%m-%d %H:%M:%S')
             print(f'YM concat minute candle start datetime: {concat_ym_minute_df.iloc[[0]].index[0]}, end datetime: {concat_ym_minute_df.iloc[[-1]].index[0]}')
-            concat_ym_minute_df = concat_ym_minute_df.reindex(datetime_range_index).ffill()
+            concat_ym_minute_df = concat_ym_minute_df.reindex(datetime_range_index)
             print(f'YM reindexed concat minute candle start datetime: {concat_ym_minute_df.iloc[[0]].index[0]}, end datetime: {concat_ym_minute_df.iloc[[-1]].index[0]}')
             
             for dt, ym_daily_df in self.ym_futures_previous_day_df_dict.items():

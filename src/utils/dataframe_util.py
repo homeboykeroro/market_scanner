@@ -64,7 +64,8 @@ def append_customised_indicator(src_df: pd.DataFrame) -> pd.DataFrame:
                                 .fillna(red_candle_df)
                                 .rename(columns={'Compare': 'Candle Colour'}))
 
-    vol_cumsum_df = vol_df.astype(float, errors = 'raise').cumsum().rename(columns={'Volume': 'Total Volume'})
+    #vol_cumsum_df = vol_df.astype(float, errors = 'raise').cumsum().rename(columns={'Volume': 'Total Volume'})
+    vol_cumsum_df = vol_df.fillna(0).astype(float, errors = 'raise').cumsum().rename(columns={'Volume': 'Total Volume'})
     vol_20_ma_df = vol_df.rolling(window=20, min_periods=1).mean().rename(columns={'Volume': '20MA Volume'})
     vol_50_ma_df = vol_df.rolling(window=50, min_periods=1).mean().rename(columns={'Volume': '50MA Volume'})
 

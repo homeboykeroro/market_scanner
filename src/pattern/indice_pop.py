@@ -49,7 +49,7 @@ def analyse_index_pop(minute_df, daily_df, index) -> None:
     vol_50_ma_df = minute_df.loc[:, idx[:, '50MA Volume']].rename(columns={'50MA Volume': 'Compare'})
     above_vol_20_ma_boolean_df = (volume_df >= vol_20_ma_df)
     above_vol_50_ma_boolean_df = (volume_df >= vol_50_ma_df)
-    index_top_n_volume_np = np.sort(volume_df.astype(int, errors = 'raise').to_numpy(), axis=0)[::-1][:INDEX_TOP_N_VOLUME, :]  
+    index_top_n_volume_np = np.sort(volume_df.fillna(0).astype(int, errors = 'ignore').to_numpy(), axis=0)[::-1][:INDEX_TOP_N_VOLUME, :]  
     is_in_index_top_n_volume = volume_df >= index_top_n_volume_np.min(axis=0)
     top_10_volume_boolean_df = pd.DataFrame(is_in_index_top_n_volume, 
                                             index=volume_df.index, 
@@ -137,7 +137,7 @@ def analyse_index_pop(minute_df, daily_df, index) -> None:
         print(f'{index} index ramp up send message time: {time.time() - send_message_time} seconds')
     
     #close percent change notification
-    natural_number_close_pct_df = close_pct_df.fillna(0).astype(int, errors = 'raise')
+    natural_number_close_pct_df = close_pct_df.fillna(-999).astype(int, errors = 'raise')
     natural_number_close_pct_df = natural_number_close_pct_df.where((natural_number_close_pct_df > 0).values)
     natural_number_close_pct_df = natural_number_close_pct_df.ffill()
     shifted_natural_number_close_pct_df = natural_number_close_pct_df.shift(1)

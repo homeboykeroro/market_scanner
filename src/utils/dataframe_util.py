@@ -86,11 +86,11 @@ def append_customised_indicator(src_df: pd.DataFrame) -> pd.DataFrame:
     gap_up_pct_df = (((candle_lower_body_df.sub(shifted_upper_body_df.values))
                                            .div(shifted_upper_body_df.values))
                                            .mul(100)
-                                           .where(gap_up_boolean_df.values)).rename(columns={'Compare': 'Gap Percent Change'})
+                                           .where(gap_up_boolean_df.values)).replace([np.inf, -np.inf], np.nan).rename(columns={'Compare': 'Gap Percent Change'})
     gap_down_pct_df = (((candle_upper_body_df.sub(shifted_lower_body_df.values))
                                              .div(candle_upper_body_df.values))
                                              .mul(100)
-                                             .where(gap_down_boolean_df.values)).rename(columns={'Compare': 'Gap Percent Change'})
+                                             .where(gap_down_boolean_df.values)).replace([np.inf, -np.inf], np.nan).rename(columns={'Compare': 'Gap Percent Change'})
     gap_pct_df = ((gap_up_pct_df.fillna(gap_down_pct_df)
                                 .where(~no_gap_boolean_df.values)))
     
@@ -99,7 +99,7 @@ def append_customised_indicator(src_df: pd.DataFrame) -> pd.DataFrame:
     marubozu_ratio_df = (body_diff_df.div(high_low_diff_df.values)).mul(100).rename(columns={'Compare': 'Marubozu Ratio'})
     
     complete_df = pd.concat([src_df, 
-                            close_pct_df,
+                            close_pct_df.replace([np.inf, -np.inf], np.nan),
                             gap_pct_df,
                             marubozu_ratio_df,
                             vol_20_ma_df,

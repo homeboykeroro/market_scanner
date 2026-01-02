@@ -65,7 +65,7 @@ def convert_to_eastern(dt_string):
     
     return new_string
 
-def get_us_business_day(offset_day: int, us_date: datetime = None) -> datetime.datetime:
+def get_us_business_day(offset_day: int, us_date: datetime = None) -> datetime:
     """
     Returns a US/Eastern timezone-aware datetime offset by the given number of
     NYSE trading (business) days.

@@ -46,8 +46,31 @@ def main():
             es_data.reqHistoricalData(20000, es_contract, '', f'{str(int(timeframe_interval * 60))} S', '1 min', 'TRADES', 0, 1, False, [])
             es_data.reqHistoricalData(21000, es_contract, '', '2 D', '1 day', 'TRADES', 1, 1, False, [])
             es_data.data_finished.wait()
+            
+            if len(es_data.error_list) > 0:
+                connection_error = False
+                fatal_error = False
+                error_msg = ''
+                
+                for error in es_data.error_list:
+                    if isinstance(error, ConnectionException):
+                        connection_error = True
+                        error_msg = str(error)
+                        break
+                    else:
+                        fatal_error = True
+                        error_msg = str(error)
+                        break
+                
+                if connection_error:
+                    raise ConnectionException(error_msg)
+                
+                if fatal_error:
+                    raise Exception(error_msg)
             time.sleep(5)
         except Exception as e:
+            es_data.error_list = []
+            
             if isinstance(e, ConnectionException):
                 sleep_time = 180
 

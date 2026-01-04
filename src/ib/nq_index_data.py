@@ -1,5 +1,6 @@
 import datetime
 import threading
+import traceback
 import pandas as pd
 import pytz
 
@@ -21,6 +22,7 @@ class NasdaqIndexData(EClient, EWrapper):
     nq_futures_previous_day_df_dict = {}
     minute_data_fetched = False
     daily_data_fetched = False
+    error_list = []
     
     def __init__(self):
         EClient.__init__(self, self)
@@ -32,6 +34,7 @@ class NasdaqIndexData(EClient, EWrapper):
         self.nq_futures_previous_day_df_dict = {}
         self.minute_data_fetched = False
         self.daily_data_fetched = False
+        self.error_list = []
         
     # def connectAck(self):
     #     print(f'Connecting and fetching Nasdaq index data, client id: {self.clientId}')
@@ -57,111 +60,132 @@ class NasdaqIndexData(EClient, EWrapper):
             print(bypass_error_msg)
         elif errorCode in connection_error_code_list:
             connect_fail_msg = f'reqId: {reqId}, TWS Connection Error, errorCode: {errorCode}, message: {errorString}'
-            raise ConnectionException(connect_fail_msg)
+            exception_obj = ConnectionException(connect_fail_msg)
+            self.error_list.append(exception_obj)
         else:
             #438 - application is locked
             if errorCode == -1 or errorCode == 502 or errorCode == 504 or errorCode == 438:
                 connect_fail_msg = f'reqId: {reqId}, TWS Connection Error, errorCode: {errorCode}, message: {errorString}'
-                raise ConnectionException(connect_fail_msg)
+                exception_obj =  ConnectionException(connect_fail_msg)
+                self.error_list.append(exception_obj)
             
             fatal_error_msg = f'reqId: {reqId}, TWS Fatal Error, errorCode: {errorCode}, message: {errorString}'
-            raise Exception(fatal_error_msg)
+            exception_obj = Exception(fatal_error_msg)
+            self.error_list.append(exception_obj)
+        
+        if len(self.error_list) > 0:
+            self.data_finished.set()
 
     def headTimestamp(self, reqId:int, headTimestamp:str):
         print("HeadTimestamp. reqId:", reqId, "headTimeStamp:", headTimestamp)
 
     def historicalData(self, reqId: int, bar: BarData):
-        open = bar.open
-        high = bar.high
-        low = bar.low
-        close = bar.close
-        volume = bar.volume
-        
-        if 'US/Central' in bar.date or 'US/Eastern' in bar.date:
-            dt = convert_to_eastern(bar.date)
-            dt = dt.replace(" US/Eastern", "")
-        else:
-            dt = datetime.datetime.strptime(bar.date, '%Y%m%d').strftime('%Y-%m-%d')
+        try:
+            open = bar.open
+            high = bar.high
+            low = bar.low
+            close = bar.close
+            volume = bar.volume
 
-        if reqId == 10000:
-            ohlcv_list = []
-            ohlcv_list.append([open, high, low, close, volume])
-            ticker_to_indicator_column = pd.MultiIndex.from_product([['NQ'], ['Open', 'High', 'Low', 'Close', 'Volume']])
-            single_ticker_candle_df = pd.DataFrame(ohlcv_list, columns=ticker_to_indicator_column, index=[dt])
-            self.nq_futures_df_dict[dt] = single_ticker_candle_df 
-            
-        if reqId == 11000:
-            ohlcv_list = []
-            ohlcv_list.append([open, high, low, close, volume])
-            ticker_to_indicator_column = pd.MultiIndex.from_product([['NQ'], ['Open', 'High', 'Low', 'Close', 'Volume']])
-            single_ticker_candle_df = pd.DataFrame(ohlcv_list, columns=ticker_to_indicator_column, index=[dt])
-            self.nq_futures_previous_day_df_dict[dt] = single_ticker_candle_df
-            
-    #Marks the ending of historical bars reception.
-    def historicalDataEnd(self, reqId: int, start: str, end: str):
-        if reqId == 10000:
-            print(f'clientID: {self.clientId}, NQ available minute candle historical data, start: {start}, end: {end}') 
-            #logger.log_debug_msg(f'clientID: {self.clientId}, NQ minute candle, start: {start}, end: {end}')
-            self.minute_data_fetched = True
-        if reqId == 11000:
-            print(f'clientID: {self.clientId}, NQ available daily candle historical data, start: {start}, end: {end}') 
-            #logger.log_debug_msg(f'clientID: {self.clientId}, NQ daily candle, start: {start}, end: {end}')
-            self.daily_data_fetched = True
-        
-        us_current_datetime = datetime.datetime.now().astimezone(pytz.timezone('US/Eastern'))
-        previous_us_business_day = get_us_business_day(-1, us_current_datetime)
-        nearest_trading_day = get_us_business_day(0, us_current_datetime)
-        
-        if self.minute_data_fetched and self.daily_data_fetched:
-            if (datetime.time(16, 0, 0) <= us_current_datetime.time().replace(microsecond=0) <= datetime.time(23, 59, 59)):
-                start_range = nearest_trading_day.replace(hour=16, minute=0, second=0, microsecond=0).strftime('%Y-%m-%d %H:%M:%S')
-            elif datetime.time(0, 0, 0) <= us_current_datetime.time().replace(microsecond=0) < datetime.time(4, 0, 0):
-                start_range = previous_us_business_day.replace(hour=16, minute=0, second=0, microsecond=0).strftime('%Y-%m-%d %H:%M:%S')
-            elif datetime.time(4, 0, 0) <= us_current_datetime.time().replace(microsecond=0) < datetime.time(16, 0, 0):
-                start_range = nearest_trading_day.replace(hour=4, minute=0, second=0, microsecond=0).strftime('%Y-%m-%d %H:%M:%S')
-        
-            print(f'Slice NQ minute candle start range: {start_range}')
-        
-            nq_minute_df_list = []
-            nq_daily_df_list = []
-            
-            for dt, nq_minute_df in self.nq_futures_df_dict.items():
-                nq_minute_df_list.append(nq_minute_df)
-            
-            concat_nq_minute_df = pd.concat(nq_minute_df_list, axis=0)
-            print(f'NQ original concat minute candle start datetime: {concat_nq_minute_df.iloc[[0]].index[0]}, end datetime: {concat_nq_minute_df.iloc[[-1]].index[0]}')
-            concat_nq_minute_df = concat_nq_minute_df.loc[start_range:, :]
-            print(f'NQ sliced concat minute candle start datetime: {concat_nq_minute_df.iloc[[0]].index[0]}, end datetime: {concat_nq_minute_df.iloc[[-1]].index[0]}')
-            
-            for dt, nq_daily_df in self.nq_futures_previous_day_df_dict.items():
-                nq_daily_df_list.append(nq_daily_df)
-                
-            concat_nq_daily_df = pd.concat(nq_daily_df_list, axis=0)
-            
-            complete_nq_minute_df = append_customised_indicator(concat_nq_minute_df)
-            complete_nq_daily_df = append_customised_indicator(concat_nq_daily_df)
-            analyse_index_pop(complete_nq_minute_df, complete_nq_daily_df, 'NQ')
-            analyse_index_dip(complete_nq_minute_df, complete_nq_daily_df, 'NQ')
-            self.initialise()
-            print(f'clientID: {self.clientId}, completed NQ minute candle start: {complete_nq_minute_df.iloc[[0]].index.to_list()[0]}, end: {complete_nq_minute_df.iloc[[-1]].index.to_list()[0]}')
-            print(f'clientID: {self.clientId}, completed NQ daily candle range: {complete_nq_daily_df.index.tolist()}')
-            print(f'clientID: {self.clientId}, complete NQ data analysis')
-            #logger.log_debug_msg(f'clientID: {self.clientId}, completed NQ minute candle start: {complete_nq_minute_df.iloc[[0]].index.to_list()[0]}, end: {complete_nq_minute_df.iloc[[-1]].index.to_list()[0]}')
-            #logger.log_debug_msg(f'clientID: {self.clientId}, completed NQ daily candle start: {complete_nq_daily_df.index.tolist()}')
-            #logger.log_debug_msg(f'clientID: {self.clientId}, complete NQ data analysis')
-            #self.cancelHistoricalData(10000)
-            #self.cancelHistoricalData(11000)
-            
+            if 'US/Central' in bar.date or 'US/Eastern' in bar.date:
+                dt = convert_to_eastern(bar.date)
+                dt = dt.replace(" US/Eastern", "")
+            else:
+                dt = datetime.datetime.strptime(bar.date, '%Y%m%d').strftime('%Y-%m-%d')
+
+            if reqId == 10000:
+                ohlcv_list = []
+                ohlcv_list.append([open, high, low, close, volume])
+                ticker_to_indicator_column = pd.MultiIndex.from_product([['NQ'], ['Open', 'High', 'Low', 'Close', 'Volume']])
+                single_ticker_candle_df = pd.DataFrame(ohlcv_list, columns=ticker_to_indicator_column, index=[dt])
+                self.nq_futures_df_dict[dt] = single_ticker_candle_df 
+
+            if reqId == 11000:
+                ohlcv_list = []
+                ohlcv_list.append([open, high, low, close, volume])
+                ticker_to_indicator_column = pd.MultiIndex.from_product([['NQ'], ['Open', 'High', 'Low', 'Close', 'Volume']])
+                single_ticker_candle_df = pd.DataFrame(ohlcv_list, columns=ticker_to_indicator_column, index=[dt])
+                self.nq_futures_previous_day_df_dict[dt] = single_ticker_candle_df
+        except Exception as e:
+            print(traceback.format_exc())
+            self.error_list.append(e)
             self.data_finished.set()
 
-            # #debug
-            # with pd.option_context('display.max_rows', None,
-            #                            'display.max_columns', None,
-            #                         'display.precision', 3):
-            #     logger.log_debug_msg(complete_nq_minute_df)
-            
-            # #debug
-            # with pd.option_context('display.max_rows', None,
-            #                            'display.max_columns', None,
-            #                         'display.precision', 3):
-            #     logger.log_debug_msg(complete_nq_daily_df)
+    #Marks the ending of historical bars reception.
+    def historicalDataEnd(self, reqId: int, start: str, end: str):
+        try:
+            if reqId == 10000:
+                print(f'clientID: {self.clientId}, NQ available minute candle historical data, start: {start}, end: {end}') 
+                #logger.log_debug_msg(f'clientID: {self.clientId}, NQ minute candle, start: {start}, end: {end}')
+                self.minute_data_fetched = True
+            if reqId == 11000:
+                print(f'clientID: {self.clientId}, NQ available daily candle historical data, start: {start}, end: {end}') 
+                #logger.log_debug_msg(f'clientID: {self.clientId}, NQ daily candle, start: {start}, end: {end}')
+                self.daily_data_fetched = True
+
+            us_current_datetime = datetime.datetime.now().astimezone(pytz.timezone('US/Eastern'))
+            previous_us_business_day = get_us_business_day(-1, us_current_datetime)
+            nearest_trading_day = get_us_business_day(0, us_current_datetime)
+
+            if self.minute_data_fetched and self.daily_data_fetched:
+                if (datetime.time(16, 0, 0) <= us_current_datetime.time().replace(microsecond=0) <= datetime.time(23, 59, 59)):
+                    start_range = nearest_trading_day.replace(hour=16, minute=0, second=0, microsecond=0).strftime('%Y-%m-%d %H:%M:%S')
+                elif datetime.time(0, 0, 0) <= us_current_datetime.time().replace(microsecond=0) < datetime.time(4, 0, 0):
+                    start_range = previous_us_business_day.replace(hour=16, minute=0, second=0, microsecond=0).strftime('%Y-%m-%d %H:%M:%S')
+                elif datetime.time(4, 0, 0) <= us_current_datetime.time().replace(microsecond=0) < datetime.time(16, 0, 0):
+                    start_range = nearest_trading_day.replace(hour=4, minute=0, second=0, microsecond=0).strftime('%Y-%m-%d %H:%M:%S')
+
+                print(f'Slice NQ minute candle start range: {start_range}')
+
+                nq_minute_df_list = []
+                nq_daily_df_list = []
+
+                for dt, nq_minute_df in self.nq_futures_df_dict.items():
+                    nq_minute_df_list.append(nq_minute_df)
+
+                concat_nq_minute_df = pd.concat(nq_minute_df_list, axis=0)
+                print(f'NQ original concat minute candle start datetime: {concat_nq_minute_df.iloc[[0]].index[0]}, end datetime: {concat_nq_minute_df.iloc[[-1]].index[0]}')
+                concat_nq_minute_df = concat_nq_minute_df.loc[start_range:, :]
+                
+                if concat_nq_minute_df is None or concat_nq_minute_df.empty:
+                    print(f'Empty NQ minute dataframe')
+                    self.data_finished.set()
+                    return
+                
+                print(f'NQ sliced concat minute candle start datetime: {concat_nq_minute_df.iloc[[0]].index[0]}, end datetime: {concat_nq_minute_df.iloc[[-1]].index[0]}')
+
+                for dt, nq_daily_df in self.nq_futures_previous_day_df_dict.items():
+                    nq_daily_df_list.append(nq_daily_df)
+
+                concat_nq_daily_df = pd.concat(nq_daily_df_list, axis=0)
+
+                complete_nq_minute_df = append_customised_indicator(concat_nq_minute_df)
+                complete_nq_daily_df = append_customised_indicator(concat_nq_daily_df)
+                analyse_index_pop(complete_nq_minute_df, complete_nq_daily_df, 'NQ')
+                analyse_index_dip(complete_nq_minute_df, complete_nq_daily_df, 'NQ')
+                self.initialise()
+                print(f'clientID: {self.clientId}, completed NQ minute candle start: {complete_nq_minute_df.iloc[[0]].index.to_list()[0]}, end: {complete_nq_minute_df.iloc[[-1]].index.to_list()[0]}')
+                print(f'clientID: {self.clientId}, completed NQ daily candle range: {complete_nq_daily_df.index.tolist()}')
+                print(f'clientID: {self.clientId}, complete NQ data analysis')
+                #logger.log_debug_msg(f'clientID: {self.clientId}, completed NQ minute candle start: {complete_nq_minute_df.iloc[[0]].index.to_list()[0]}, end: {complete_nq_minute_df.iloc[[-1]].index.to_list()[0]}')
+                #logger.log_debug_msg(f'clientID: {self.clientId}, completed NQ daily candle start: {complete_nq_daily_df.index.tolist()}')
+                #logger.log_debug_msg(f'clientID: {self.clientId}, complete NQ data analysis')
+                #self.cancelHistoricalData(10000)
+                #self.cancelHistoricalData(11000)
+                self.data_finished.set()
+
+                # #debug
+                # with pd.option_context('display.max_rows', None,
+                #                            'display.max_columns', None,
+                #                         'display.precision', 3):
+                #     logger.log_debug_msg(complete_nq_minute_df)
+
+                # #debug
+                # with pd.option_context('display.max_rows', None,
+                #                            'display.max_columns', None,
+                #                         'display.precision', 3):
+                #     logger.log_debug_msg(complete_nq_daily_df)
+        except Exception as e:
+            print(traceback.format_exc())
+            self.error_list.append(e)
+            self.data_finished.set()

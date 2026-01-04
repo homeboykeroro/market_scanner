@@ -46,8 +46,31 @@ def main():
             ym_data.reqHistoricalData(30000, ym_contract, '', f'{str(int(timeframe_interval * 60))} S', '1 min', 'TRADES', 0, 1, False, [])
             ym_data.reqHistoricalData(31000, ym_contract, '', '2 D', '1 day', 'TRADES', 1, 1, False, [])
             ym_data.data_finished.wait()
+            
+            if len(ym_data.error_list) > 0:
+                connection_error = False
+                fatal_error = False
+                error_msg = ''
+                
+                for error in ym_data.error_list:
+                    if isinstance(error, ConnectionException):
+                        connection_error = True
+                        error_msg = str(error)
+                        break
+                    else:
+                        fatal_error = True
+                        error_msg = str(error)
+                        break
+                
+                if connection_error:
+                    raise ConnectionException(error_msg)
+                
+                if fatal_error:
+                    raise Exception(error_msg)
             time.sleep(5)
         except Exception as e:
+            ym_data.error_list = []
+            
             if isinstance(e, ConnectionException):
                 sleep_time = 180
 
@@ -55,7 +78,6 @@ def main():
                 print(f'TWS API Connection Lost, Cause: {e}')
                 print('Re-establishing Dow Jones scanner connection due to connectivity issue')
                 #logger.log_debug_msg('Re-establishing Dow Jones scanner connection due to connectivity issue')
-                ym_data.data_finished.clear()
                 send_message(channel=MAIN_BOT, message='Re-establishing Dow Jones scanner connection due to connectivity issue', tts=True)
             else:
                 sleep_time = 10

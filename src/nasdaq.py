@@ -5,7 +5,6 @@ import time
 import pandas as pd
 import pytz
 import traceback
-import queue
 
 from ibapi.contract import Contract
 
@@ -47,8 +46,31 @@ def main():
             nq_data.reqHistoricalData(10000, nq_contract, '', f'{str(int(timeframe_interval * 60))} S', '1 min', 'TRADES', 0, 1, False, [])
             nq_data.reqHistoricalData(11000, nq_contract, '', '2 D', '1 day', 'TRADES', 1, 1, False, [])
             nq_data.data_finished.wait()
+            
+            if len(nq_data.error_list) > 0:
+                connection_error = False
+                fatal_error = False
+                error_msg = ''
+                
+                for error in nq_data.error_list:
+                    if isinstance(error, ConnectionException):
+                        connection_error = True
+                        error_msg = str(error)
+                        break
+                    else:
+                        fatal_error = True
+                        error_msg = str(error)
+                        break
+                
+                if connection_error:
+                    raise ConnectionException(error_msg)
+                
+                if fatal_error:
+                    raise Exception(error_msg)
             time.sleep(5)
         except Exception as e:
+            nq_data.error_list = []
+            
             if isinstance(e, ConnectionException):
                 sleep_time = 180
 

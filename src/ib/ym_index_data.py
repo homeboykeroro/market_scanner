@@ -129,7 +129,10 @@ class DowJonesIndexData(EClient, EWrapper):
 
             if self.minute_data_fetched and self.daily_data_fetched:
                 if (datetime.time(16, 0, 0) <= us_current_datetime.time().replace(microsecond=0) <= datetime.time(23, 59, 59)):
-                    start_range = nearest_trading_day.replace(hour=16, minute=0, second=0, microsecond=0).strftime('%Y-%m-%d %H:%M:%S')
+                    if us_current_datetime.weekday() == 6:
+                        start_range = previous_us_business_day.replace(hour=16, minute=0, second=0, microsecond=0).strftime('%Y-%m-%d %H:%M:%S')
+                    else:
+                        start_range = nearest_trading_day.replace(hour=16, minute=0, second=0, microsecond=0).strftime('%Y-%m-%d %H:%M:%S')
                 elif datetime.time(0, 0, 0) <= us_current_datetime.time().replace(microsecond=0) < datetime.time(4, 0, 0):
                     start_range = previous_us_business_day.replace(hour=16, minute=0, second=0, microsecond=0).strftime('%Y-%m-%d %H:%M:%S')
                 elif datetime.time(4, 0, 0) <= us_current_datetime.time().replace(microsecond=0) < datetime.time(16, 0, 0):

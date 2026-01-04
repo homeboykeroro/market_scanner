@@ -1,9 +1,7 @@
-import datetime
 import os
 import threading
 import time
 import pandas as pd
-import pytz
 import traceback
 
 from ibapi.contract import Contract
@@ -11,8 +9,6 @@ from ibapi.contract import Contract
 from ib.es_index_data import SP500IndexData
 from notification.discord_client import MAIN_BOT, send_message
 from exception.connection_exception import ConnectionException
-
-from utils.datetime_util import get_us_business_day
 
 #from utils.logger import Logger
 

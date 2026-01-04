@@ -40,17 +40,8 @@ def main():
             ym_contract.secType = "CONTFUT"
             ym_contract.exchange = "CBOT"
             
-            us_current_datetime = datetime.datetime.now().astimezone(pytz.timezone('US/Eastern'))
-            previous_us_business_day = get_us_business_day(-1, us_current_datetime)
-            nearest_trading_day = get_us_business_day(0, us_current_datetime)
-            previous_day_premarket_start_time = previous_us_business_day.replace(hour=4, minute=0, second=0).strftime('%Y-%m-%d %H:%M:%S')
-            print(f'previous us business day: {previous_day_premarket_start_time},  nearest trading day: {nearest_trading_day}')
-            timeframe_interval = int(((nearest_trading_day - previous_day_premarket_start_time).total_seconds()) / 60)
-            print(f'calculate time interval, start datetime: {previous_day_premarket_start_time.strftime('%Y-%m-%d %H:%M:%S')}, end datetime: {nearest_trading_day.strftime('%Y-%m-%d %H:%M:%S')}, time difference: {timeframe_interval}')
-            
-            if timeframe_interval < 1:
-                print('Timeframe interval less than 1 minute')
-                return
+            # 1day = 1440 minutes = 86400 seconds
+            timeframe_interval = 1440
 
             ym_data.reqHistoricalData(30000, ym_contract, '', f'{str(int(timeframe_interval * 60))} S', '1 min', 'TRADES', 0, 1, False, [])
             ym_data.reqHistoricalData(31000, ym_contract, '', '2 D', '1 day', 'TRADES', 1, 1, False, [])

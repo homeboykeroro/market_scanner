@@ -67,6 +67,9 @@ class NasdaqIndexData(EClient, EWrapper):
             fatal_error_msg = f'reqId: {reqId}, TWS Fatal Error, errorCode: {errorCode}, message: {errorString}'
             raise Exception(fatal_error_msg)
 
+    def headTimestamp(self, reqId:int, headTimestamp:str):
+        print("HeadTimestamp. reqId:", reqId, "headTimeStamp:", headTimestamp)
+
     def historicalData(self, reqId: int, bar: BarData):
         open = bar.open
         high = bar.high
@@ -97,21 +100,28 @@ class NasdaqIndexData(EClient, EWrapper):
     #Marks the ending of historical bars reception.
     def historicalDataEnd(self, reqId: int, start: str, end: str):
         if reqId == 10000:
-            print(f'clientID: {self.clientId}, NQ minute candle, start: {start}, end: {end}') 
+            print(f'clientID: {self.clientId}, NQ available minute candle historical data, start: {start}, end: {end}') 
             #logger.log_debug_msg(f'clientID: {self.clientId}, NQ minute candle, start: {start}, end: {end}')
             self.minute_data_fetched = True
         if reqId == 11000:
-            print(f'clientID: {self.clientId}, NQ daily candle, start: {start}, end: {end}') 
+            print(f'clientID: {self.clientId}, NQ available daily candle historical data, start: {start}, end: {end}') 
             #logger.log_debug_msg(f'clientID: {self.clientId}, NQ daily candle, start: {start}, end: {end}')
             self.daily_data_fetched = True
         
         us_current_datetime = datetime.datetime.now().astimezone(pytz.timezone('US/Eastern'))
         previous_us_business_day = get_us_business_day(-1, us_current_datetime)
         nearest_trading_day = get_us_business_day(0, us_current_datetime)
-        previous_day_premarket_start_time = previous_us_business_day.replace(hour=4, minute=0, second=0).strftime('%Y-%m-%d %H:%M:%S')
-        print(f'previous us business day: {previous_day_premarket_start_time},  nearest trading day: {nearest_trading_day}')
         
         if self.minute_data_fetched and self.daily_data_fetched:
+            if (datetime.time(16, 0, 0) <= us_current_datetime.time().replace(microsecond=0) <= datetime.time(23, 59, 59)):
+                start_range = nearest_trading_day.replace(hour=16, minute=0, second=0, microsecond=0).strftime('%Y-%m-%d %H:%M:%S')
+            elif datetime.time(0, 0, 0) <= us_current_datetime.time().replace(microsecond=0) < datetime.time(4, 0, 0):
+                start_range = previous_us_business_day.replace(hour=16, minute=0, second=0, microsecond=0).strftime('%Y-%m-%d %H:%M:%S')
+            elif datetime.time(4, 0, 0) <= us_current_datetime.time().replace(microsecond=0) < datetime.time(16, 0, 0):
+                start_range = nearest_trading_day.replace(hour=4, minute=0, second=0, microsecond=0).strftime('%Y-%m-%d %H:%M:%S')
+        
+            print(f'Slice NQ minute candle start range: {start_range}')
+        
             nq_minute_df_list = []
             nq_daily_df_list = []
             
@@ -119,14 +129,10 @@ class NasdaqIndexData(EClient, EWrapper):
                 nq_minute_df_list.append(nq_minute_df)
             
             concat_nq_minute_df = pd.concat(nq_minute_df_list, axis=0)
-            concat_nq_minute_df = concat_nq_minute_df.loc[previous_day_premarket_start_time:, :]
-            #reindex to unify all minute candle dataframes have same dimension
-            #even though get error in current datetime difference, should be 1 minute at most
-            datetime_range_index = pd.date_range(start=previous_day_premarket_start_time, end=nearest_trading_day.strftime('%Y-%m-%d %H:%M:%S'), freq='1min').strftime('%Y-%m-%d %H:%M:%S')
-            print(f'NQ concat minute candle start datetime: {concat_nq_minute_df.iloc[[0]].index[0]}, end datetime: {concat_nq_minute_df.iloc[[-1]].index[0]}')
-            concat_nq_minute_df = concat_nq_minute_df.reindex(datetime_range_index)
-            print(f'NQ reindexed concat minute candle start datetime: {concat_nq_minute_df.iloc[[0]].index[0]}, end datetime: {concat_nq_minute_df.iloc[[-1]].index[0]}')
-
+            print(f'NQ original concat minute candle start datetime: {concat_nq_minute_df.iloc[[0]].index[0]}, end datetime: {concat_nq_minute_df.iloc[[-1]].index[0]}')
+            concat_nq_minute_df = concat_nq_minute_df.loc[start_range:, :]
+            print(f'NQ sliced concat minute candle start datetime: {concat_nq_minute_df.iloc[[0]].index[0]}, end datetime: {concat_nq_minute_df.iloc[[-1]].index[0]}')
+            
             for dt, nq_daily_df in self.nq_futures_previous_day_df_dict.items():
                 nq_daily_df_list.append(nq_daily_df)
                 
@@ -145,7 +151,7 @@ class NasdaqIndexData(EClient, EWrapper):
             #logger.log_debug_msg(f'clientID: {self.clientId}, complete NQ data analysis')
             #self.cancelHistoricalData(10000)
             #self.cancelHistoricalData(11000)
-
+            
             self.data_finished.set()
 
             # #debug

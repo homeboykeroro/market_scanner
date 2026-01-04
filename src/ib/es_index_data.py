@@ -59,6 +59,7 @@ class SP500IndexData(EClient, EWrapper):
             connect_fail_msg = f'reqId: {reqId}, TWS Connection Error, errorCode: {errorCode}, message: {errorString}'
             raise ConnectionException(connect_fail_msg)
         else:
+            #438 - application is locked
             if errorCode == -1 or errorCode == 502 or errorCode == 504 or errorCode == 438:
                 connect_fail_msg = f'reqId: {reqId}, TWS Connection Error, errorCode: {errorCode}, message: {errorString}'
                 raise ConnectionException(connect_fail_msg)
@@ -110,10 +111,17 @@ class SP500IndexData(EClient, EWrapper):
         us_current_datetime = datetime.datetime.now().astimezone(pytz.timezone('US/Eastern'))
         previous_us_business_day = get_us_business_day(-1, us_current_datetime)
         nearest_trading_day = get_us_business_day(0, us_current_datetime)
-        previous_day_premarket_start_time = previous_us_business_day.replace(hour=4, minute=0, second=0).strftime('%Y-%m-%d %H:%M:%S')
-        print(f'previous us business day: {previous_day_premarket_start_time},  nearest trading day: {nearest_trading_day}')
-        
+
         if self.minute_data_fetched and self.daily_data_fetched:
+            if (datetime.time(16, 0, 0) <= us_current_datetime.time().replace(microsecond=0) <= datetime.time(23, 59, 59)):
+                start_range = nearest_trading_day.replace(hour=16, minute=0, second=0, microsecond=0).strftime('%Y-%m-%d %H:%M:%S')
+            elif datetime.time(0, 0, 0) <= us_current_datetime.time().replace(microsecond=0) < datetime.time(4, 0, 0):
+                start_range = previous_us_business_day.replace(hour=16, minute=0, second=0, microsecond=0).strftime('%Y-%m-%d %H:%M:%S')
+            elif datetime.time(4, 0, 0) <= us_current_datetime.time().replace(microsecond=0) < datetime.time(16, 0, 0):
+                start_range = nearest_trading_day.replace(hour=4, minute=0, second=0, microsecond=0).strftime('%Y-%m-%d %H:%M:%S')
+        
+            print(f'Slice ES minute candle start range: {start_range}')
+        
             es_minute_df_list = []
             es_daily_df_list = []
             
@@ -121,18 +129,15 @@ class SP500IndexData(EClient, EWrapper):
                 es_minute_df_list.append(es_minute_df)
             
             concat_es_minute_df = pd.concat(es_minute_df_list, axis=0)
-            concat_es_minute_df = concat_es_minute_df.loc[previous_day_premarket_start_time:, :]
-            #reindex to unify all minute candle dataframes have same dimension
-            #even though get error in current datetime difference, should be 1 minute at most
-            datetime_range_index = pd.date_range(start=previous_day_premarket_start_time, end=nearest_trading_day.strftime('%Y-%m-%d %H:%M:%S'), freq='1min').strftime('%Y-%m-%d %H:%M:%S')
-            print(f'ES concat minute candle start datetime: {concat_es_minute_df.iloc[[0]].index[0]}, end datetime: {concat_es_minute_df.iloc[[-1]].index[0]}')
-            concat_es_minute_df = concat_es_minute_df.reindex(datetime_range_index)
-            print(f'ES reindexed concat minute candle start datetime: {concat_es_minute_df.iloc[[0]].index[0]}, end datetime: {concat_es_minute_df.iloc[[-1]].index[0]}')
+            print(f'ES original concat minute candle start datetime: {concat_es_minute_df.iloc[[0]].index[0]}, end datetime: {concat_es_minute_df.iloc[[-1]].index[0]}')
+            concat_es_minute_df = concat_es_minute_df.loc[start_range:, :]
+            print(f'ES sliced concat minute candle start datetime: {concat_es_minute_df.iloc[[0]].index[0]}, end datetime: {concat_es_minute_df.iloc[[-1]].index[0]}')
             
             for dt, es_daily_df in self.es_futures_previous_day_df_dict.items():
                 es_daily_df_list.append(es_daily_df)
                 
             concat_es_daily_df = pd.concat(es_daily_df_list, axis=0)
+            
             complete_es_minute_df = append_customised_indicator(concat_es_minute_df)
             complete_es_daily_df = append_customised_indicator(concat_es_daily_df)
             analyse_index_pop(complete_es_minute_df, complete_es_daily_df, 'ES')

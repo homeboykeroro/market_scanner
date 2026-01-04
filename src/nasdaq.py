@@ -24,30 +24,14 @@ def main():
     send_message(channel=MAIN_BOT, message='Nasdaq scanner connection success', tts=True)
     
     nq_data = NasdaqIndexData()
-    
-    def thread_target_with_exception_handling(target_func, result_queue):
-        """Wrapper that runs the target and puts any exception into the queue"""
-        try:
-            target_func()
-        except Exception as e:
-            # Capture full traceback
-            tb = traceback.format_exc()
-            result_queue.put(('error', e, tb))
-        else:
-            result_queue.put(('success', None, None))
-
-    # Usage
-    result_queue = queue.Queue()
-    
     print(f'Create TWS connection, clientID: 1')
     nq_data.connect('127.0.0.1', 8888, 1)
-    wrapped_target = lambda: thread_target_with_exception_handling(nq_data.run, result_queue)
-    api_thread = threading.Thread(target=wrapped_target)
-    api_thread.name = 'NQ'    
+    api_thread = threading.Thread(target=nq_data.run)
+    api_thread.name = 'NQ'
     api_thread.start()
     # Wait for connection to establish (optional, but good practice)
     time.sleep(5) 
-    
+
     while True:
         try:
             nq_data.data_finished.clear()
@@ -57,17 +41,8 @@ def main():
             nq_contract.secType = "CONTFUT"
             nq_contract.exchange = "CME"
             
-            us_current_datetime = datetime.datetime.now().astimezone(pytz.timezone('US/Eastern'))
-            previous_us_business_day = get_us_business_day(-1, us_current_datetime)
-            nearest_trading_day = get_us_business_day(0, us_current_datetime)
-            previous_day_premarket_start_time = previous_us_business_day.replace(hour=4, minute=0, second=0).strftime('%Y-%m-%d %H:%M:%S')
-            print(f'previous us business day: {previous_day_premarket_start_time},  nearest trading day: {nearest_trading_day}')
-            timeframe_interval = int(((nearest_trading_day - previous_day_premarket_start_time).total_seconds()) / 60)
-            print(f'calculate time interval, start datetime: {previous_day_premarket_start_time.strftime('%Y-%m-%d %H:%M:%S')}, end datetime: {nearest_trading_day.strftime('%Y-%m-%d %H:%M:%S')}, time difference: {timeframe_interval}')
-            
-            if timeframe_interval < 1:
-                print('Timeframe interval less than 1 minute')
-                return
+            # 1day = 1440 minutes = 86400 seconds
+            timeframe_interval = 1440
 
             nq_data.reqHistoricalData(10000, nq_contract, '', f'{str(int(timeframe_interval * 60))} S', '1 min', 'TRADES', 0, 1, False, [])
             nq_data.reqHistoricalData(11000, nq_contract, '', '2 D', '1 day', 'TRADES', 1, 1, False, [])

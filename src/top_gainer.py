@@ -26,7 +26,7 @@ def main():
     top_gainer_screener = TopGainerData()
     print(f'Create TWS connection for top gainer screener, clientID: 10')
     top_gainer_screener.connect('127.0.0.1', 8888, 10)
-    api_thread = threading.Thread(target=top_gainer_screener.run, daemon=True)
+    api_thread = threading.Thread(target=top_gainer_screener.run)
     api_thread.start()
     # Wait for connection to establish (optional, but good practice)
     time.sleep(5)
@@ -40,9 +40,19 @@ def main():
     time.sleep(5) 
     
     while True:
-        if (datetime.datetime.now().astimezone(pytz.timezone('US/Eastern')).time() > datetime.time(16, 0, 0)):
-            scrap_previous_day_top_gainer()
+        us_current_datetime = datetime.datetime.now().astimezone(pytz.timezone('US/Eastern'))
         
+        if us_current_datetime.date() != get_us_business_day(0, us_current_datetime).date():
+            print('Top gainer scanner is idle... (Holiday)')
+            continue
+        
+        if not (datetime.time(4, 0, 0) < us_current_datetime.time() < datetime.time(20, 0, 0)):
+            print('Top gainer scanner is idle... (Outside regular trading hours)')
+            continue
+        
+        if (datetime.time(16, 0, 0) < us_current_datetime.time().replace(second=0, microsecond=0) <= datetime.time(23, 59, 0)):
+            scrap_previous_day_top_gainer()
+
         try:
             top_gainer_screener.screener_finished.clear()
             top_gainer_data.data_finished.clear()
@@ -51,10 +61,28 @@ def main():
             top_gainer_screener.screener_finished.wait()
             print('Top gainer screener completed scanning')
             
-            us_current_datetime = datetime.datetime.now().astimezone(pytz.timezone('US/Eastern'))
-            previous_us_business_day = get_us_business_day(-1, us_current_datetime)
-            print(f'previous US business day: {previous_us_business_day.strftime('%Y-%m-%d %H:%M:%S')}')
-            premarket_start_time = previous_us_business_day.replace(hour=16, minute=0, second=0) if datetime.time(0, 0, 0) < us_current_datetime.time() < datetime.time(4, 0, 0) else us_current_datetime.replace(hour=4, minute=0, second=0)
+            if len(top_gainer_screener.error_list) > 0:
+                connection_error = False
+                fatal_error = False
+                error_msg = ''
+                
+                for error in top_gainer_screener.error_list:
+                    if isinstance(error, ConnectionException):
+                        connection_error = True
+                        error_msg = str(error)
+                        break
+                    else:
+                        fatal_error = True
+                        error_msg = str(error)
+                        break
+                
+                if connection_error:
+                    raise ConnectionException(error_msg)
+                
+                if fatal_error:
+                    raise Exception(error_msg)
+            
+            premarket_start_time = us_current_datetime.replace(hour=4, minute=0, second=0)
             timeframe_interval = int(((us_current_datetime - premarket_start_time).total_seconds()) / 60)
             print(f'calculate time interval, start datetime: {premarket_start_time.strftime('%Y-%m-%d %H:%M:%S')}, end datetime: {us_current_datetime.strftime('%Y-%m-%d %H:%M:%S')}, time difference: {timeframe_interval}')
             
@@ -70,9 +98,30 @@ def main():
                     top_gainer_data.reqHistoricalData((100 + rank), contract, '', f'{str(int(timeframe_interval * 60))} S', '1 min', 'TRADES', 0, 1, False, [])
                     top_gainer_data.reqHistoricalData((200 + rank), contract, '', '2 D', '1 day', 'TRADES', 1, 1, False, [])
                 top_gainer_data.data_finished.wait()
+                
+                if len(top_gainer_data.error_list) > 0:
+                    connection_error = False
+                    fatal_error = False
+                    error_msg = ''
+
+                    for error in top_gainer_data.error_list:
+                        if isinstance(error, ConnectionException):
+                            connection_error = True
+                            error_msg = str(error)
+                            break
+                        else:
+                            fatal_error = True
+                            error_msg = str(error)
+                            break
+                        
+                    if connection_error:
+                        raise ConnectionException(error_msg)
+
+                    if fatal_error:
+                        raise Exception(error_msg)
             else:
                 print('No top gainer contract list found')
-                
+            
             time.sleep(5)
         except Exception as e:
             if isinstance(e, ConnectionException):

@@ -22,6 +22,16 @@ def scrap_previous_day_top_gainer():
     start_time = time.time() 
     scrape_datetime = datetime.datetime.now().astimezone(pytz.timezone('US/Eastern'))
 
+    today_top_gainer_count_result = execute_in_transaction("""SELECT COUNT(*) AS ct FROM TOP_GAINER_HISTORY 
+                                                              WHERE DATE(SCAN_DATE) = ? 
+                                                            """,
+                                                               (scrape_datetime.strftime('%Y-%m-%d')))
+    today_top_gainer_count = dict(today_top_gainer_count_result[0])['ct']
+    
+    if today_top_gainer_count > 0:
+        print(f'{scrape_datetime.strftime('%Y-%m-%d')} top gainer history already added before')
+        return
+    
     try:
         scrap_start_time = time.time()
         response = session.get(FINVIZ_LINK, params=TOP_GAINER_PAYLOAD, headers=HEADERS)

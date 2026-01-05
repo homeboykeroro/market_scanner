@@ -68,10 +68,10 @@ class NasdaqIndexData(EClient, EWrapper):
                 connect_fail_msg = f'reqId: {reqId}, TWS Connection Error, errorCode: {errorCode}, message: {errorString}'
                 exception_obj =  ConnectionException(connect_fail_msg)
                 self.error_list.append(exception_obj)
-            
-            fatal_error_msg = f'reqId: {reqId}, TWS Fatal Error, errorCode: {errorCode}, message: {errorString}'
-            exception_obj = Exception(fatal_error_msg)
-            self.error_list.append(exception_obj)
+            else:
+                fatal_error_msg = f'reqId: {reqId}, TWS Fatal Error, errorCode: {errorCode}, message: {errorString}'
+                exception_obj = Exception(fatal_error_msg)
+                self.error_list.append(exception_obj)
         
         if len(self.error_list) > 0:
             self.data_finished.set()

@@ -59,9 +59,11 @@ def main():
                         break
                 
                 if connection_error:
+                    nq_data.initialise()
                     raise ConnectionException(error_msg)
                 
                 if fatal_error:
+                    nq_data.initialise()
                     raise Exception(error_msg)
             time.sleep(5)
         except Exception as e:

@@ -83,9 +83,11 @@ def main():
                         break
                 
                 if connection_error:
+                    top_gainer_screener.initialise()
                     raise ConnectionException(error_msg)
                 
                 if fatal_error:
+                    top_gainer_screener.initialise()
                     raise Exception(error_msg)
             
             premarket_start_time = us_current_datetime.replace(hour=4, minute=0, second=0)
@@ -121,9 +123,11 @@ def main():
                             break
                         
                     if connection_error:
+                        top_gainer_data.initialise()
                         raise ConnectionException(error_msg)
 
                     if fatal_error:
+                        top_gainer_data.initialise()
                         raise Exception(error_msg)
             else:
                 print('No top gainer contract list found')

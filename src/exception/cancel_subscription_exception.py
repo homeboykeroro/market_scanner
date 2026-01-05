@@ -1,0 +1,2 @@
+class CancelSubscriptionException(Exception):
+    pass

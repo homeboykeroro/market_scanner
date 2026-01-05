@@ -10,6 +10,7 @@ from ib.ib_top_gainer_data import TopGainerData
 from ib.screener_filter import small_cap_pop_filter
 from notification.discord_client import MAIN_BOT, send_message
 from exception.connection_exception import ConnectionException
+from exception.cancel_subscription_exception import CancelSubscriptionException
 
 from utils.previous_day_top_gainer_scraper import scrap_previous_day_top_gainer
 from utils.datetime_util import get_us_business_day
@@ -26,16 +27,18 @@ def main():
     top_gainer_screener = TopGainerData()
     print(f'Create TWS connection for top gainer screener, clientID: 10')
     top_gainer_screener.connect('127.0.0.1', 8888, 10)
-    api_thread = threading.Thread(target=top_gainer_screener.run)
-    api_thread.start()
+    screener_api_thread = threading.Thread(target=top_gainer_screener.run)
+    screener_api_thread.name = 'Screener'
+    screener_api_thread.start()
     # Wait for connection to establish (optional, but good practice)
     time.sleep(5)
     
     top_gainer_data = TopGainerData()
     print(f'Create TWS connection for top gainer data, clientID: 11')
     top_gainer_data.connect('127.0.0.1', 8888, 11)
-    api_thread = threading.Thread(target=top_gainer_data.run)
-    api_thread.start()
+    data_api_thread = threading.Thread(target=top_gainer_data.run)
+    data_api_thread.name = 'Data'
+    data_api_thread.start()
     # Wait for connection to establish (optional, but good practice)
     time.sleep(5) 
     
@@ -71,6 +74,9 @@ def main():
                         connection_error = True
                         error_msg = str(error)
                         break
+                    elif isinstance(error, CancelSubscriptionException):
+                        connection_error = False
+                        fatal_error = False
                     else:
                         fatal_error = True
                         error_msg = str(error)

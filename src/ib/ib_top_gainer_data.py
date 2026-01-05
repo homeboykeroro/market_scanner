@@ -9,6 +9,7 @@ from ibapi.client import *
 from ibapi.wrapper import *
 
 from exception.connection_exception import ConnectionException
+from exception.cancel_subscription_exception import CancelSubscriptionException
 
 from utils.dataframe_util import append_customised_indicator
 #from utils.logger import Logger
@@ -64,15 +65,19 @@ class TopGainerData(EClient, EWrapper):
             exception_obj = ConnectionException(connect_fail_msg)
             self.error_list.append(exception_obj)
         else:
+            if errorCode == 162:
+                connect_fail_msg = f'reqId: {reqId}, TWS Connection Error, errorCode: {errorCode}, message: {errorString}'
+                exception_obj =  CancelSubscriptionException(connect_fail_msg)
+                self.error_list.append(exception_obj)
             #438 - application is locked
-            if errorCode == -1 or errorCode == 502 or errorCode == 504 or errorCode == 438:
+            elif errorCode == -1 or errorCode == 502 or errorCode == 504 or errorCode == 438:
                 connect_fail_msg = f'reqId: {reqId}, TWS Connection Error, errorCode: {errorCode}, message: {errorString}'
                 exception_obj =  ConnectionException(connect_fail_msg)
                 self.error_list.append(exception_obj)
-            
-            fatal_error_msg = f'reqId: {reqId}, TWS Fatal Error, errorCode: {errorCode}, message: {errorString}'
-            exception_obj = Exception(fatal_error_msg)
-            self.error_list.append(exception_obj)
+            else:
+                fatal_error_msg = f'reqId: {reqId}, TWS Fatal Error, errorCode: {errorCode}, message: {errorString}'
+                exception_obj = Exception(fatal_error_msg)
+                self.error_list.append(exception_obj)
         
         if len(self.error_list) > 0:
             self.data_finished.set()
@@ -213,7 +218,7 @@ class TopGainerData(EClient, EWrapper):
         try:
             print(f'clientID:{self.clientId}, scanner data end list: {[contract.symbol for contract in self.small_cap_pop_contract_list]}')
             #logger.log_debug_msg(f'clientID:{self.clientId}, scanner data end list: {[contract.symbol for contract in self.small_cap_pop_contract_list]}')
-
+            self.cancelScannerSubscription(reqId)
             self.screener_finished.set()
         except Exception as e:
             print(traceback.format_exc())

@@ -101,6 +101,8 @@ def main():
             print(f'fetch {timeframe_interval} min candel for small cap pop scanner, start time: {premarket_start_time.strftime('%Y-%m-%d %H:%M:%S')}, end time: {us_current_datetime}')
             
             top_gainer_data.small_cap_pop_contract_list = top_gainer_screener.small_cap_pop_contract_list
+            top_gainer_screener.initialise()
+            
             if top_gainer_data.small_cap_pop_contract_list:
                 for rank, contract in enumerate(top_gainer_data.small_cap_pop_contract_list):
                     top_gainer_data.reqHistoricalData((100 + rank), contract, '', f'{str(int(timeframe_interval * 60))} S', '1 min', 'TRADES', 0, 1, False, [])

@@ -65,6 +65,7 @@ class TopGainerData(EClient, EWrapper):
             exception_obj = ConnectionException(connect_fail_msg)
             self.error_list.append(exception_obj)
         else:
+            #Cancel scanner subscription
             if errorCode == 162:
                 connect_fail_msg = f'reqId: {reqId}, TWS Connection Error, errorCode: {errorCode}, message: {errorString}'
                 exception_obj =  CancelSubscriptionException(connect_fail_msg)
@@ -137,10 +138,14 @@ class TopGainerData(EClient, EWrapper):
             us_current_datetime = datetime.datetime.now().astimezone(pytz.timezone('US/Eastern'))
             premarket_start_time = us_current_datetime.replace(hour=4, minute=0, second=0).strftime('%Y-%m-%d %H:%M:%S')
 
+            # print(f'len(self.small_cap_pop_contract_list): {len(self.small_cap_pop_contract_list)}')
+            # print(f'len(self.small_cap_pop_df_dict): {len(self.small_cap_pop_df_dict)}')
+            # print(f'len(self.small_cap_pop_previous_day_df_dict): {len(self.small_cap_pop_previous_day_df_dict)}')
             if (self.small_cap_pop_df_dict 
                     and self.small_cap_pop_contract_list
                     and len(self.small_cap_pop_df_dict) == len(self.small_cap_pop_contract_list)
                     and len(self.small_cap_pop_previous_day_df_dict) == len(self.small_cap_pop_contract_list)):
+                #print('processing candle...')
                 ticker_minute_df_list = []
                 ticker_daily_df_list= []
 

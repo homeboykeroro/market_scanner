@@ -24,31 +24,12 @@ def analyse_yesterday_bullish_daily_candle(minute_df, daily_df) -> None:
         print('yesterday bullish daily candle analysis is idle...')
         return
 
-    top_gainer_ticker_list = list(set(minute_df.columns.get_level_values(0).to_list()))
     latest_minute_date = minute_df.iloc[[-1]].index.tolist()[0].rsplit(" ")[0]
     print(f'yesterday bullish daily candle latest_minute_date: {latest_minute_date}')
-    filtered_ticker_list = []
-    
-    for rank, top_gainer_ticker in enumerate(top_gainer_ticker_list):
-        record_count_result = execute_in_transaction("""SELECT COUNT(*) AS ct FROM TOP_GAINER_HISTORY
-                                                        WHERE TICKER = ?
-                                                        AND DATE(SCAN_DATE) = ?
-                                                        ORDER BY SCAN_DATE DESC
-                                                    """,
-                                                    (top_gainer_ticker, latest_minute_date))
-        record_count = dict(record_count_result[0])['ct']
-        if record_count > 0:
-            filtered_ticker_list.append(top_gainer_ticker)
-    
-    print(f'filtered previous top gainer ticker list: {filtered_ticker_list}')
-    
-    if len(filtered_ticker_list) < 1:
-        print(f'no top gainer ticker found in yesterday bullish daily candle...')
-        return
     
     after_hour_start_datetime = latest_minute_date + ' ' + '16:00:00'
     after_hour_end_datetime =  minute_df.iloc[[-1]].index[0]
-    afterhour_minute_df = minute_df.loc[after_hour_start_datetime:after_hour_end_datetime, idx[filtered_ticker_list, :]]
+    afterhour_minute_df = minute_df.loc[after_hour_start_datetime:after_hour_end_datetime, :]
     print(f'Yesterday bullish daily candle select afterhour start datetime: {after_hour_start_datetime}, afterhour end datetime: {after_hour_end_datetime}')
 
     close_df = afterhour_minute_df.loc[:, idx[:, 'Close']].rename(columns={'Close': 'Compare'})
@@ -57,7 +38,7 @@ def analyse_yesterday_bullish_daily_candle(minute_df, daily_df) -> None:
         
     print(f'Analyse yesterday bullish daily candle previous day value: {previous_day_df.iloc[[0]].index[-1]}')
     
-    previous_close_df = previous_day_df.loc[:, idx[filtered_ticker_list, 'Close']].rename(columns={'Close': 'Compare'})
+    previous_close_df = previous_day_df.loc[:, idx[:, 'Close']].rename(columns={'Close': 'Compare'})
     
     sub_df = close_df.sub(previous_close_df.values)
     div_df = sub_df.div(previous_close_df.values)

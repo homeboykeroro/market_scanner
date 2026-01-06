@@ -12,7 +12,6 @@ from notification.discord_client import MAIN_BOT, send_message
 from exception.connection_exception import ConnectionException
 from exception.cancel_subscription_exception import CancelSubscriptionException
 
-from utils.previous_day_top_gainer_scraper import scrap_previous_day_top_gainer
 from utils.datetime_util import get_us_business_day
 
 #from utils.logger import Logger
@@ -24,6 +23,9 @@ def main():
     send_message(channel=MAIN_BOT, message='top gainer scanner connection success', tts=True)
     
     small_cap_pop_search_filter = small_cap_pop_filter()
+    small_cap_pop_afterhour_search_filter = small_cap_pop_filter()
+    small_cap_pop_afterhour_search_filter.scanCode = 'TOP_AFTERHOURS_PERC_GAIN'
+    
     top_gainer_screener = TopGainerData()
     print(f'Create TWS connection for top gainer screener, clientID: 10')
     top_gainer_screener.connect('127.0.0.1', 8888, 10)
@@ -52,15 +54,19 @@ def main():
         if not (datetime.time(4, 0, 0) < us_current_datetime.time() < datetime.time(20, 0, 0)):
             print('Top gainer scanner is idle... (Outside regular trading hours)')
             continue
-        
-        if (datetime.time(16, 0, 0) < us_current_datetime.time().replace(second=0, microsecond=0) <= datetime.time(23, 59, 0)):
-            scrap_previous_day_top_gainer()
 
         try:
             top_gainer_screener.screener_finished.clear()
             top_gainer_data.data_finished.clear()
             
-            top_gainer_screener.reqScannerSubscription(1, small_cap_pop_search_filter, [], [])
+            if us_current_datetime.time() > datetime.time(16, 0, 0):
+                filter = small_cap_pop_afterhour_search_filter
+                print('Search by afterhour top gainer filter')
+            else:
+                filter = small_cap_pop_search_filter
+                print('Search by top gainer filter')
+            
+            top_gainer_screener.reqScannerSubscription(1, filter, [], [])
             top_gainer_screener.screener_finished.wait()
             print('Top gainer screener completed scanning')
             
@@ -134,7 +140,102 @@ def main():
             else:
                 print('No top gainer contract list found')
             
-            time.sleep(5)
+            if (datetime.time(16, 0, 0) < us_current_datetime.time().replace(second=0, microsecond=0) <= datetime.time(23, 59, 0)):
+                #Deprecated
+                #scrap_previous_day_top_gainer()
+                afterhour_top_gainer_screener = TopGainerData()
+                print(f'Create TWS connection for top gainer screener, clientID: 10')
+                afterhour_top_gainer_screener.connect('127.0.0.1', 8888, 10)
+                afterhour_screener_api_thread = threading.Thread(target=afterhour_top_gainer_screener.run)
+                afterhour_screener_api_thread.name = 'Screener'
+                afterhour_screener_api_thread.start()
+                # Wait for connection to establish (optional, but good practice)
+                time.sleep(5)
+                
+                afterhour_top_gainer_data = TopGainerData()
+                afterhour_top_gainer_data.analyse_previous_day_top_gainer = True
+                print(f'Create TWS connection for top gainer data, clientID: 11')
+                afterhour_top_gainer_data.connect('127.0.0.1', 8888, 11)
+                afterhour_data_api_thread = threading.Thread(target=afterhour_top_gainer_data.run)
+                afterhour_data_api_thread.name = 'Data'
+                afterhour_data_api_thread.start()
+                # Wait for connection to establish (optional, but good practice)
+                time.sleep(5) 
+    
+                afterhour_top_gainer_screener.screener_finished.clear()
+                afterhour_top_gainer_screener.reqScannerSubscription(2, small_cap_pop_search_filter, [], [])
+                afterhour_top_gainer_screener.screener_finished.wait()
+                print('Top gainer screener completed scanning')
+
+                if len(afterhour_top_gainer_screener.error_list) > 0:
+                    connection_error = False
+                    fatal_error = False
+                    error_msg = ''
+
+                    for error in afterhour_top_gainer_screener.error_list:
+                        if isinstance(error, ConnectionException):
+                            connection_error = True
+                            error_msg = str(error)
+                            break
+                        elif isinstance(error, CancelSubscriptionException):
+                            connection_error = False
+                            fatal_error = False
+                        else:
+                            fatal_error = True
+                            error_msg = str(error)
+                            break
+                        
+                    if connection_error:
+                        afterhour_top_gainer_screener.initialise()
+                        raise ConnectionException(error_msg)
+
+                    if fatal_error:
+                        afterhour_top_gainer_screener.initialise()
+                        raise Exception(error_msg)
+                    
+                premarket_start_time = us_current_datetime.replace(hour=4, minute=0, second=0)
+                timeframe_interval = int(((us_current_datetime - premarket_start_time).total_seconds()) / 60)
+                print(f'calculate time interval, start datetime: {premarket_start_time.strftime('%Y-%m-%d %H:%M:%S')}, end datetime: {us_current_datetime.strftime('%Y-%m-%d %H:%M:%S')}, time difference: {timeframe_interval}')
+
+                if timeframe_interval < 1:
+                    print('Timeframe interval less than 1 minute')
+                    return
+
+                print(f'fetch {timeframe_interval} min candel for small cap pop scanner, start time: {premarket_start_time.strftime('%Y-%m-%d %H:%M:%S')}, end time: {us_current_datetime}')
+
+                afterhour_top_gainer_data.small_cap_pop_contract_list = afterhour_top_gainer_screener.small_cap_pop_contract_list
+                afterhour_top_gainer_screener.initialise()
+
+                if afterhour_top_gainer_data.small_cap_pop_contract_list:
+                    for rank, contract in enumerate(afterhour_top_gainer_data.small_cap_pop_contract_list):
+                        afterhour_top_gainer_data.reqHistoricalData((100 + rank), contract, '', f'{str(int(timeframe_interval * 60))} S', '1 min', 'TRADES', 0, 1, False, [])
+                        afterhour_top_gainer_data.reqHistoricalData((200 + rank), contract, '', '2 D', '1 day', 'TRADES', 1, 1, False, [])
+                    afterhour_top_gainer_data.data_finished.wait()
+
+                    if len(afterhour_top_gainer_data.error_list) > 0:
+                        connection_error = False
+                        fatal_error = False
+                        error_msg = ''
+
+                        for error in afterhour_top_gainer_data.error_list:
+                            if isinstance(error, ConnectionException):
+                                connection_error = True
+                                error_msg = str(error)
+                                break
+                            else:
+                                fatal_error = True
+                                error_msg = str(error)
+                                break
+                            
+                        if connection_error:
+                            afterhour_top_gainer_data.initialise()
+                            raise ConnectionException(error_msg)
+
+                        if fatal_error:
+                            afterhour_top_gainer_data.initialise()
+                            raise Exception(error_msg)
+                else:
+                    print('No previous day top gainer contract list found')
         except Exception as e:
             if isinstance(e, ConnectionException):
                 sleep_time = 180

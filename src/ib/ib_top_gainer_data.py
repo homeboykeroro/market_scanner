@@ -24,6 +24,7 @@ class TopGainerData(EClient, EWrapper):
     small_cap_pop_contract_list = []
     small_cap_pop_df_dict = {}
     small_cap_pop_previous_day_df_dict = {}
+    analyse_previous_day_top_gainer = False
     error_list = []
     
     def __init__(self):
@@ -31,6 +32,7 @@ class TopGainerData(EClient, EWrapper):
         self.initialise()
         self.screener_finished = threading.Event() 
         self.data_finished = threading.Event() 
+        self.analyse_previous_day_top_gainer = False
 
     def initialise(self):
         self.small_cap_pop_contract_list = []
@@ -192,7 +194,10 @@ class TopGainerData(EClient, EWrapper):
                 complete_daily_df = append_customised_indicator(complete_daily_df)
                 analyse_small_cap_pop(complete_minute_df, complete_daily_df)
                 analyse_small_cap_ramp_up(complete_minute_df, complete_daily_df)
-                analyse_yesterday_bullish_daily_candle(complete_minute_df, complete_daily_df)
+                
+                if self.analyse_previous_day_top_gainer:
+                    analyse_yesterday_bullish_daily_candle(complete_minute_df, complete_daily_df)
+                
                 self.initialise()
                 print(f'clientID: {self.clientId}, completed top gainer minute candle start: {complete_minute_df.iloc[[0]].index.to_list()[0]}, end: {complete_minute_df.iloc[[-1]].index.to_list()[0]}')
                 print(f'clientID: {self.clientId}, completed top gainer daily candle range: {complete_daily_df.index.tolist()}')

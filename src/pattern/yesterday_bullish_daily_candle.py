@@ -34,7 +34,7 @@ def analyse_yesterday_bullish_daily_candle(minute_df, daily_df) -> None:
 
     close_df = afterhour_minute_df.loc[:, idx[:, 'Close']].rename(columns={'Close': 'Compare'})
     candle_colour_df = afterhour_minute_df.loc[:, idx[:, 'Candle Colour']].rename(columns={'Candle Colour': 'Compare'})
-    previous_day_df = daily_df.iloc[[-1]]
+    previous_day_df = daily_df.iloc[[0]]
         
     print(f'Analyse yesterday bullish daily candle previous day value: {previous_day_df.iloc[[0]].index[-1]}')
     

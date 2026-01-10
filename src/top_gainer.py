@@ -8,6 +8,7 @@ import traceback
 
 from ib.ib_top_gainer_data import TopGainerData
 from ib.screener_filter import small_cap_pop_filter
+from database.sqlite_connector import execute_in_transaction
 from notification.discord_client import MAIN_BOT, send_message
 from exception.connection_exception import ConnectionException
 from exception.cancel_subscription_exception import CancelSubscriptionException
@@ -24,7 +25,7 @@ def main():
     
     small_cap_pop_search_filter = small_cap_pop_filter()
     small_cap_pop_afterhour_search_filter = small_cap_pop_filter()
-    small_cap_pop_afterhour_search_filter.scanCode = 'TOP_AFTERHOURS_PERC_GAIN'
+    small_cap_pop_afterhour_search_filter.scanCode = 'TOP_AFTER_HOURS_PERC_GAIN'
     
     top_gainer_screener = TopGainerData()
     print(f'Create TWS connection for top gainer screener, clientID: 10')
@@ -141,11 +142,22 @@ def main():
                 print('No top gainer contract list found')
             
             if (datetime.time(16, 0, 0) < us_current_datetime.time().replace(second=0, microsecond=0) <= datetime.time(23, 59, 0)):
+                today_top_gainer_count_result = execute_in_transaction("""SELECT COUNT(*) AS ct FROM PATTERN_ANALYSIS 
+                                                                          WHERE DATE(HIT_SCANNER_DATETIME) = ?
+                                                                          AND SCAN_PATTERN = ? 
+                                                                          AND BAR_SIZE = ? 
+                                                                        """,
+                                                                        (us_current_datetime.strftime('%Y-%m-%d'), 'YESTERDAY_BULLISH_DAILY_CANDLE', '1day'))
+                today_top_gainer_count = dict(today_top_gainer_count_result[0])['ct']
+                
+                if today_top_gainer_count > 0:
+                    continue
+                
                 #Deprecated
                 #scrap_previous_day_top_gainer()
                 afterhour_top_gainer_screener = TopGainerData()
-                print(f'Create TWS connection for top gainer screener, clientID: 10')
-                afterhour_top_gainer_screener.connect('127.0.0.1', 8888, 10)
+                print(f'Create TWS connection for top gainer screener, clientID: 12')
+                afterhour_top_gainer_screener.connect('127.0.0.1', 8888, 12)
                 afterhour_screener_api_thread = threading.Thread(target=afterhour_top_gainer_screener.run)
                 afterhour_screener_api_thread.name = 'Screener'
                 afterhour_screener_api_thread.start()
@@ -154,8 +166,8 @@ def main():
                 
                 afterhour_top_gainer_data = TopGainerData()
                 afterhour_top_gainer_data.analyse_previous_day_top_gainer = True
-                print(f'Create TWS connection for top gainer data, clientID: 11')
-                afterhour_top_gainer_data.connect('127.0.0.1', 8888, 11)
+                print(f'Create TWS connection for top gainer data, clientID: 13')
+                afterhour_top_gainer_data.connect('127.0.0.1', 8888, 13)
                 afterhour_data_api_thread = threading.Thread(target=afterhour_top_gainer_data.run)
                 afterhour_data_api_thread.name = 'Data'
                 afterhour_data_api_thread.start()

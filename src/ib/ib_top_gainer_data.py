@@ -19,6 +19,7 @@ from pattern.small_cap_ramp_up import analyse_small_cap_ramp_up
 from pattern.yesterday_bullish_daily_candle import analyse_yesterday_bullish_daily_candle
 
 #logger = Logger()
+idx = pd.IndexSlice
 
 class TopGainerData(EClient, EWrapper):
     small_cap_pop_contract_list = []
@@ -70,7 +71,12 @@ class TopGainerData(EClient, EWrapper):
             #Cancel scanner subscription
             if errorCode == 162:
                 connect_fail_msg = f'reqId: {reqId}, TWS Connection Error, errorCode: {errorCode}, message: {errorString}'
-                exception_obj =  CancelSubscriptionException(connect_fail_msg)
+                
+                if not 'duplicate scan subscription' in connect_fail_msg:
+                    exception_obj =  CancelSubscriptionException(connect_fail_msg)
+                else:
+                    exception_obj =  Exception(connect_fail_msg)
+                    
                 self.error_list.append(exception_obj)
             #438 - application is locked
             elif errorCode == -1 or errorCode == 502 or errorCode == 504 or errorCode == 438:
@@ -83,6 +89,7 @@ class TopGainerData(EClient, EWrapper):
                 self.error_list.append(exception_obj)
         
         if len(self.error_list) > 0:
+            self.screener_finished.set()
             self.data_finished.set()
     
     def headTimestamp(self, reqId:int, headTimestamp:str):
@@ -150,6 +157,7 @@ class TopGainerData(EClient, EWrapper):
                 #print('processing candle...')
                 ticker_minute_df_list = []
                 ticker_daily_df_list= []
+                ticker_list = [contract.symbol for contract in self.small_cap_pop_contract_list]
 
                 for ticker, minute_df_dict in self.small_cap_pop_df_dict.items():
                     minute_df_list = []
@@ -172,6 +180,7 @@ class TopGainerData(EClient, EWrapper):
                     ticker_minute_df_list.append(single_ticker_minute_df)
 
                 complete_minute_df = pd.concat(ticker_minute_df_list, axis=1)
+                complete_minute_df = complete_minute_df.loc[:, idx[ticker_list, :]]
                 complete_minute_df = append_customised_indicator(complete_minute_df)
                 print(f'Complete minute candle start datetime: {complete_minute_df.iloc[[0]].index[0]}, end datetime: {complete_minute_df.iloc[[-1]].index[0]}')
                 
@@ -191,6 +200,7 @@ class TopGainerData(EClient, EWrapper):
                     ticker_daily_df_list.append(single_ticker_candle_df)
 
                 complete_daily_df = pd.concat(ticker_daily_df_list, axis=1)
+                complete_daily_df = complete_daily_df.loc[:, idx[ticker_list, :]]
                 complete_daily_df = append_customised_indicator(complete_daily_df)
                 analyse_small_cap_pop(complete_minute_df, complete_daily_df)
                 analyse_small_cap_ramp_up(complete_minute_df, complete_daily_df)

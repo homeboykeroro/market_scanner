@@ -4,16 +4,16 @@ import pandas as pd
 import numpy as np
 import pytz
 
+from utils.logger import Logger
 from utils.dataframe_util import get_ticker_to_occurrence_idx_list
 from utils.datetime_util import convert_into_human_readable_time, convert_into_read_out_time
-#from utils.logger import Logger
 
 from notification.discord_client import NQ_DIP, NQ_CLOSE_PCT_DOWN, ES_DIP, ES_CLOSE_PCT_DOWN, YM_DIP, YM_CLOSE_PCT_DOWN, send_message
 
 from database.sqlite_connector import execute_in_transaction
 
 idx = pd.IndexSlice
-#logger = Logger()
+logger = Logger(filename='nasdaq')
  
 MIN_INDEX_CLOSE_PCT = -0.03
 INDEX_TOP_N_VOLUME = 10
@@ -39,6 +39,12 @@ def analyse_index_dip(minute_df, daily_df, index) -> None:
     
     print(f'Analyse {index} index dip previous day value: {previous_day_df.iloc[[0]].index[-1]}')
     
+    close_df = minute_df.loc[:, idx[:, 'Close']].rename(columns={'Close': 'Compare'})
+    previous_close_df = previous_day_df.iloc[[0]].loc[:, idx[:, 'Close']]
+    previous_close_pct_df = close_df.sub(previous_close_df.values)
+    previous_close_pct_df = previous_close_pct_df.div(previous_close_df.values)
+    previous_close_pct_df = previous_close_pct_df.mul(100)
+    
     #dip (>20ma, >50ma, top 10 volume)
     red_candle_df = (candle_colour_df == 'Red')
     marubozu_boolean_df = (marubozu_ratio_df >= MIN_MARUBOZU_RATIO)
@@ -54,6 +60,23 @@ def analyse_index_dip(minute_df, daily_df, index) -> None:
     top_10_volume_boolean_df = pd.DataFrame(is_in_index_top_n_volume, 
                                             index=volume_df.index, 
                                             columns=volume_df.columns)
+    # # #debug
+    # logger.log_debug_msg('=======================================')
+    # with pd.option_context('display.max_rows', None,
+    #                         'display.max_columns', None,
+    #                         'display.precision', 3):
+    #     logger.log_debug_msg(minute_df)
+    # logger.log_debug_msg('---------------------------------------')
+    # with pd.option_context('display.max_rows', None,
+    #                         'display.max_columns', None,
+    #                         'display.precision', 3):
+    #     logger.log_debug_msg(daily_df)
+    # logger.log_debug_msg('---------------------------------------')
+    # with pd.option_context('display.max_rows', None,
+    #                         'display.max_columns', None,
+    #                         'display.precision', 3):
+    #     logger.log_debug_msg(previous_close_pct_df)
+    # logger.log_debug_msg('=======================================')
     
     index_dip_boolean_df = (red_candle_df) & (marubozu_boolean_df) & (min_pct_boolean_df) & (above_vol_20_ma_boolean_df | above_vol_50_ma_boolean_df | top_10_volume_boolean_df)
 
@@ -136,13 +159,13 @@ def analyse_index_dip(minute_df, daily_df, index) -> None:
         print(f'{index} index dip send message time: {time.time() - send_message_time} seconds')
     
     #close percent change notification
-    natural_number_close_pct_df = close_pct_df.fillna(999).astype(int, errors = 'ignore')
-    natural_number_close_pct_df = natural_number_close_pct_df.where((natural_number_close_pct_df < 0).values)
+    natural_number_close_pct_df = previous_close_pct_df.fillna(999).astype(int, errors = 'ignore')
+    natural_number_close_pct_df = natural_number_close_pct_df.where((natural_number_close_pct_df <= 0).values)
     natural_number_close_pct_df = natural_number_close_pct_df.ffill()
     shifted_natural_number_close_pct_df = natural_number_close_pct_df.shift(1)
     progressive_boolean_df = ((natural_number_close_pct_df - shifted_natural_number_close_pct_df) < 0)
     close_pct_cum_max_df = natural_number_close_pct_df.cummax()
-    compare_cum_max_boolean_df = (natural_number_close_pct_df >= close_pct_cum_max_df)
+    compare_cum_max_boolean_df = (natural_number_close_pct_df >= close_pct_cum_max_df) & (natural_number_close_pct_df != 0)
     hit_scanner_close_pct_boolean_df = (progressive_boolean_df) & (compare_cum_max_boolean_df)
     ticker_to_close_pct_occurrence_idx_list_dict = get_ticker_to_occurrence_idx_list(hit_scanner_close_pct_boolean_df)
     

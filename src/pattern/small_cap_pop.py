@@ -7,12 +7,12 @@ from notification.discord_client import SMALL_CAP_POP, send_message
 
 from utils.datetime_util import convert_into_human_readable_time, convert_into_read_out_time
 from utils.dataframe_util import get_ticker_to_occurrence_idx_list
-#from utils.logger import Logger
+# from utils.logger import Logger
 
 from database.sqlite_connector import execute_in_transaction
 
 idx = pd.IndexSlice
-#logger = Logger()
+# logger = Logger(filename='nasdaq')
 
 MIN_GAP_UP_PCT = 5
 MIN_CLOSE_PCT = 5
@@ -59,23 +59,25 @@ def analyse_small_cap_pop(minute_df, daily_df) -> None:
     previous_close_pct_boolean_df = (previous_close_pct_df >= MIN_PREVIOUS_CLOSE_PCT)
     
     # #debug
+    # logger.log_debug_msg('=======================================')
     # with pd.option_context('display.max_rows', None,
     #                            'display.max_columns', None,
     #                         'display.precision', 3):
-    #     logger.log_debug_msg('minute_df')
     #     logger.log_debug_msg(minute_df)
+    # logger.log_debug_msg('---------------------------------------')
     # #debug
     # with pd.option_context('display.max_rows', None,
     #                            'display.max_columns', None,
     #                         'display.precision', 3):
-    #     logger.log_debug_msg("minute_df.loc[:, idx[:, 'Close']]")
-    #     logger.log_debug_msg(minute_df.loc[:, idx[:, 'Close']])
+    #     logger.log_debug_msg(previous_day_df)
     # #debug
+    # logger.log_debug_msg('---------------------------------------')
     # with pd.option_context('display.max_rows', None,
     #                            'display.max_columns', None,
     #                         'display.precision', 3):
     #     logger.log_debug_msg('previous_close_pct_df')
     #     logger.log_debug_msg(previous_close_pct_df)
+    # logger.log_debug_msg('=======================================')
     
     gap_up_pct_boolean_df = (gap_up_pct_df >= MIN_GAP_UP_PCT)
     pop_up_boolean_df = (candle_close_pct_boolean_df) & (previous_close_pct_boolean_df) & (gap_up_pct_boolean_df)

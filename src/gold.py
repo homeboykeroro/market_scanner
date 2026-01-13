@@ -6,49 +6,49 @@ import traceback
 
 from ibapi.contract import Contract
 
-from ib.ym_index_data import DowJonesIndexData
+from ib.nq_index_data import GoldIndexData
 from notification.discord_client import MAIN_BOT, send_message
 from exception.connection_exception import ConnectionException
 
 #from utils.logger import Logger
 
-#logger = Logger(filename='Dow Jones')
+#logger = Logger(filename='Gold')
 idx = pd.IndexSlice
 
 def main():
-    send_message(channel=MAIN_BOT, message='Dow Jones scanner connection success', tts=True)
+    send_message(channel=MAIN_BOT, message='Gold scanner connection success', tts=True)
     
-    ym_data = DowJonesIndexData()
-    print(f'Create TWS connection, clientID: 3')
-    ym_data.connect('127.0.0.1', 8888, 3)
-    api_thread = threading.Thread(target=ym_data.run)
-    api_thread.name = 'YM'
+    nq_data = GoldIndexData()
+    print(f'Create TWS connection, clientID: 4')
+    nq_data.connect('127.0.0.1', 8888, 4)
+    api_thread = threading.Thread(target=nq_data.run)
+    api_thread.name = 'GC'
     api_thread.start()
     # Wait for connection to establish (optional, but good practice)
     time.sleep(5) 
-    
+
     while True:
         try:
-            ym_data.data_finished.clear()
-
-            ym_contract = Contract()
-            ym_contract.symbol = "YM"
-            ym_contract.secType = "CONTFUT"
-            ym_contract.exchange = "CBOT"
+            nq_data.data_finished.clear()
+            
+            nq_contract = Contract()
+            nq_contract.symbol = "GC"
+            nq_contract.secType = "CONTFUT"
+            nq_contract.exchange = "COMEX"
             
             # 1day = 1440 minutes = 86400 seconds
             timeframe_interval = 1440
 
-            ym_data.reqHistoricalData(30000, ym_contract, '', f'{str(int(timeframe_interval * 60))} S', '1 min', 'TRADES', 0, 1, False, [])
-            ym_data.reqHistoricalData(31000, ym_contract, '', '2 D', '1 day', 'TRADES', 1, 1, False, [])
-            ym_data.data_finished.wait()
+            nq_data.reqHistoricalData(10000, nq_contract, '', f'{str(int(timeframe_interval * 60))} S', '1 min', 'TRADES', 0, 1, False, [])
+            nq_data.reqHistoricalData(11000, nq_contract, '', '2 D', '1 day', 'TRADES', 1, 1, False, [])
+            nq_data.data_finished.wait()
             
-            if len(ym_data.error_list) > 0:
+            if len(nq_data.error_list) > 0:
                 connection_error = False
                 fatal_error = False
                 error_msg = ''
                 
-                for error in ym_data.error_list:
+                for error in nq_data.error_list:
                     if isinstance(error, ConnectionException):
                         connection_error = True
                         error_msg = str(error)
@@ -59,36 +59,38 @@ def main():
                         break
                 
                 if connection_error:
+                    nq_data.initialise()
                     raise ConnectionException(error_msg)
                 
                 if fatal_error:
+                    nq_data.initialise()
                     raise Exception(error_msg)
-            time.sleep(2)
+            #time.sleep(5)
         except Exception as e:
-            ym_data.error_list = []
+            nq_data.error_list = []
             
             if isinstance(e, ConnectionException):
                 sleep_time = 180
 
                 os.system('cls')
                 print(f'TWS API Connection Lost, Cause: {e}')
-                print('Re-establishing Dow Jones scanner connection due to connectivity issue')
-                #logger.log_debug_msg('Re-establishing Dow Jones scanner connection due to connectivity issue')
-                send_message(channel=MAIN_BOT, message='Re-establishing Dow Jones scanner connection due to connectivity issue', tts=True)
+                print('Re-establishing Gold scanner connection due to connectivity issue')
+                #logger.log_debug_msg('Re-establishing Gold scanner connection due to connectivity issue')
+                send_message(channel=MAIN_BOT, message='Re-establishing Gold scanner connection due to connectivity issue', tts=True)
             else:
                 sleep_time = 10
 
                 os.system('cls')
                 print(traceback.format_exc())
                 print(f'Fatal Error, Cause: {e}')
-                print('Re-establishing Dow Jones scanner connection due to fatal error')
+                print('Re-establishing Gold scanner connection due to fatal error')
                 #logger.log_debug_msg(f'Fatal Error, Cause: {e}')
-                send_message(channel=MAIN_BOT, message='Re-establishing Dow Jones scanner connection due to fatal error', tts=True)
+                send_message(channel=MAIN_BOT, message='Re-establishing Gold scanner connection due to fatal error', tts=True)
             if sleep_time:
                 time.sleep(sleep_time)
                 sleep_time = None
                 continue
         
-        print('Completed Dow Jones index analysis')
+        print('Completed Gold index analysis')
 if __name__ == '__main__':
     main()

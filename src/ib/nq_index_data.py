@@ -128,15 +128,29 @@ class NasdaqIndexData(EClient, EWrapper):
             nearest_trading_day = get_us_business_day(0, us_current_datetime)
 
             if self.minute_data_fetched and self.daily_data_fetched:
-                if (datetime.time(16, 0, 0) <= us_current_datetime.time().replace(microsecond=0) <= datetime.time(23, 59, 59)):
+                # if (datetime.time(16, 0, 0) <= us_current_datetime.time().replace(microsecond=0) <= datetime.time(23, 59, 59)):
+                #     if us_current_datetime.weekday() == 6:
+                #         start_range = previous_us_business_day.replace(hour=16, minute=0, second=0, microsecond=0).strftime('%Y-%m-%d %H:%M:%S')
+                #     else:
+                #         start_range = nearest_trading_day.replace(hour=16, minute=0, second=0, microsecond=0).strftime('%Y-%m-%d %H:%M:%S')
+                # elif datetime.time(0, 0, 0) <= us_current_datetime.time().replace(microsecond=0) < datetime.time(4, 0, 0):
+                #     start_range = previous_us_business_day.replace(hour=16, minute=0, second=0, microsecond=0).strftime('%Y-%m-%d %H:%M:%S')
+                # elif datetime.time(4, 0, 0) <= us_current_datetime.time().replace(microsecond=0) < datetime.time(16, 0, 0):
+                #     start_range = nearest_trading_day.replace(hour=4, minute=0, second=0, microsecond=0).strftime('%Y-%m-%d %H:%M:%S')
+
+                if (((datetime.time(16, 0, 0) < us_current_datetime.time().replace(microsecond=0) < datetime.time(23, 59, 59))
+                        or (datetime.time(0, 0, 0) <= us_current_datetime.time().replace(microsecond=0) < datetime.time(4, 0, 0)))):
                     if us_current_datetime.weekday() == 6:
-                        start_range = previous_us_business_day.replace(hour=16, minute=0, second=0, microsecond=0).strftime('%Y-%m-%d %H:%M:%S')
+                        start_range = nearest_trading_day.replace(day=nearest_trading_day.day-1, hour=16, minute=1, second=0, microsecond=0).strftime('%Y-%m-%d %H:%M:%S')
                     else:
-                        start_range = nearest_trading_day.replace(hour=16, minute=0, second=0, microsecond=0).strftime('%Y-%m-%d %H:%M:%S')
-                elif datetime.time(0, 0, 0) <= us_current_datetime.time().replace(microsecond=0) < datetime.time(4, 0, 0):
-                    start_range = previous_us_business_day.replace(hour=16, minute=0, second=0, microsecond=0).strftime('%Y-%m-%d %H:%M:%S')
-                elif datetime.time(4, 0, 0) <= us_current_datetime.time().replace(microsecond=0) < datetime.time(16, 0, 0):
+                        start_range = nearest_trading_day.replace(hour=16, minute=1, second=0, microsecond=0).strftime('%Y-%m-%d %H:%M:%S')
+                    
+                    if datetime.time(0, 0, 0) <= us_current_datetime.time().replace(microsecond=0) < datetime.time(4, 0, 0):
+                        start_range = previous_us_business_day.replace(hour=16, minute=1, second=0, microsecond=0).strftime('%Y-%m-%d %H:%M:%S')
+                elif (datetime.time(4, 0, 0) <= us_current_datetime.time().replace(microsecond=0) < datetime.time(9, 30, 0)):
                     start_range = nearest_trading_day.replace(hour=4, minute=0, second=0, microsecond=0).strftime('%Y-%m-%d %H:%M:%S')
+                elif (datetime.time(9, 30, 0) <= us_current_datetime.time().replace(microsecond=0) <= datetime.time(16, 0, 0)):
+                    start_range = nearest_trading_day.replace(hour=9, minute=30, second=0, microsecond=0).strftime('%Y-%m-%d %H:%M:%S')
 
                 print(f'Slice NQ minute candle start range: {start_range}')
 

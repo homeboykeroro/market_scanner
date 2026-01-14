@@ -18,8 +18,8 @@ from pattern.indice_dip import analyse_index_dip
 #logger = Logger('sp500')
 
 class GoldIndexData(EClient, EWrapper):
-    es_futures_df_dict = {}
-    es_futures_previous_day_df_dict = {}
+    gd_futures_df_dict = {}
+    gd_futures_previous_day_df_dict = {}
     minute_data_fetched = False
     daily_data_fetched = False
     error_list = []
@@ -30,8 +30,8 @@ class GoldIndexData(EClient, EWrapper):
         self.data_finished = threading.Event() 
         
     def initialise(self):
-        self.es_futures_df_dict = {}
-        self.es_futures_previous_day_df_dict = {}
+        self.gd_futures_df_dict = {}
+        self.gd_futures_previous_day_df_dict = {}
         self.minute_data_fetched = False
         self.daily_data_fetched = False
         self.error_list = []
@@ -96,16 +96,16 @@ class GoldIndexData(EClient, EWrapper):
             if reqId == 20000:
                 ohlcv_list = []
                 ohlcv_list.append([open, high, low, close, volume])
-                ticker_to_indicator_column = pd.MultiIndex.from_product([['ES'], ['Open', 'High', 'Low', 'Close', 'Volume']])
+                ticker_to_indicator_column = pd.MultiIndex.from_product([['GD'], ['Open', 'High', 'Low', 'Close', 'Volume']])
                 single_ticker_candle_df = pd.DataFrame(ohlcv_list, columns=ticker_to_indicator_column, index=[dt])
-                self.es_futures_df_dict[dt] = single_ticker_candle_df 
+                self.gd_futures_df_dict[dt] = single_ticker_candle_df 
 
             if reqId == 21000:
                 ohlcv_list = []
                 ohlcv_list.append([open, high, low, close, volume])
-                ticker_to_indicator_column = pd.MultiIndex.from_product([['ES'], ['Open', 'High', 'Low', 'Close', 'Volume']])
+                ticker_to_indicator_column = pd.MultiIndex.from_product([['GD'], ['Open', 'High', 'Low', 'Close', 'Volume']])
                 single_ticker_candle_df = pd.DataFrame(ohlcv_list, columns=ticker_to_indicator_column, index=[dt])
-                self.es_futures_previous_day_df_dict[dt] = single_ticker_candle_df
+                self.gd_futures_previous_day_df_dict[dt] = single_ticker_candle_df
         except Exception as e:
             print(traceback.format_exc())
             self.error_list.append(e)
@@ -114,13 +114,13 @@ class GoldIndexData(EClient, EWrapper):
     #Marks the ending of historical bars reception.
     def historicalDataEnd(self, reqId: int, start: str, end: str):
         try:
-            if reqId == 20000:
-                print(f'clientID: {self.clientId}, ES minute candle, start: {start}, end: {end}') 
-                #logger.log_debug_msg(f'clientID: {self.clientId}, ES minute candle, start: {start}, end: {end}')
+            if reqId == 40000:
+                print(f'clientID: {self.clientId}, GD minute candle, start: {start}, end: {end}') 
+                #logger.log_debug_msg(f'clientID: {self.clientId}, GD minute candle, start: {start}, end: {end}')
                 self.minute_data_fetched = True
-            if reqId == 21000:
-                print(f'clientID: {self.clientId}, ES daily candle, start: {start}, end: {end}') 
-                #logger.log_debug_msg(f'clientID: {self.clientId}, ES daily candle, start: {start}, end: {end}')
+            if reqId == 41000:
+                print(f'clientID: {self.clientId}, GD daily candle, start: {start}, end: {end}') 
+                #logger.log_debug_msg(f'clientID: {self.clientId}, GD daily candle, start: {start}, end: {end}')
                 self.daily_data_fetched = True
 
             us_current_datetime = datetime.datetime.now().astimezone(pytz.timezone('US/Eastern'))
@@ -146,41 +146,41 @@ class GoldIndexData(EClient, EWrapper):
                 elif (datetime.time(9, 30, 0) <= us_current_datetime.time().replace(microsecond=0) <= datetime.time(16, 0, 0)):
                     start_range = nearest_trading_day.replace(hour=9, minute=30, second=0, microsecond=0).strftime('%Y-%m-%d %H:%M:%S')
 
-                print(f'Slice ES minute candle start range: {start_range}')
+                print(f'Slice GD minute candle start range: {start_range}')
 
-                es_minute_df_list = []
-                es_daily_df_list = []
+                gd_minute_df_list = []
+                gd_daily_df_list = []
 
-                for dt, es_minute_df in self.es_futures_df_dict.items():
-                    es_minute_df_list.append(es_minute_df)
+                for dt, gd_minute_df in self.gd_futures_df_dict.items():
+                    gd_minute_df_list.append(gd_minute_df)
 
-                concat_es_minute_df = pd.concat(es_minute_df_list, axis=0)
-                print(f'ES original concat minute candle start datetime: {concat_es_minute_df.iloc[[0]].index[0]}, end datetime: {concat_es_minute_df.iloc[[-1]].index[0]}')
-                concat_es_minute_df = concat_es_minute_df.loc[start_range:, :]
+                concat_gd_minute_df = pd.concat(gd_minute_df_list, axis=0)
+                print(f'ES original concat minute candle start datetime: {concat_gd_minute_df.iloc[[0]].index[0]}, end datetime: {concat_gd_minute_df.iloc[[-1]].index[0]}')
+                concat_gd_minute_df = concat_gd_minute_df.loc[start_range:, :]
                 
-                if concat_es_minute_df is None or concat_es_minute_df.empty:
-                    print(f'Empty ES minute dataframe')
+                if concat_gd_minute_df is None or concat_gd_minute_df.empty:
+                    print(f'Empty GD minute dataframe')
                     self.data_finished.set()
                     return
 
-                print(f'ES sliced concat minute candle start datetime: {concat_es_minute_df.iloc[[0]].index[0]}, end datetime: {concat_es_minute_df.iloc[[-1]].index[0]}')
+                print(f'ES sliced concat minute candle start datetime: {concat_gd_minute_df.iloc[[0]].index[0]}, end datetime: {concat_gd_minute_df.iloc[[-1]].index[0]}')
 
-                for dt, es_daily_df in self.es_futures_previous_day_df_dict.items():
-                    es_daily_df_list.append(es_daily_df)
+                for dt, gd_daily_df in self.gd_futures_previous_day_df_dict.items():
+                    gd_daily_df_list.append(gd_daily_df)
 
-                concat_es_daily_df = pd.concat(es_daily_df_list, axis=0)
+                concat_gd_daily_df = pd.concat(gd_daily_df_list, axis=0)
 
-                complete_es_minute_df = append_customised_indicator(concat_es_minute_df)
-                complete_es_daily_df = append_customised_indicator(concat_es_daily_df)
-                analyse_index_pop(complete_es_minute_df, complete_es_daily_df, 'ES')
-                analyse_index_dip(complete_es_minute_df, complete_es_daily_df, 'ES')
+                complete_gd_minute_df = append_customised_indicator(concat_gd_minute_df)
+                complete_gd_daily_df = append_customised_indicator(concat_gd_daily_df)
+                analyse_index_pop(complete_gd_minute_df, complete_gd_daily_df, 'GD')
+                analyse_index_dip(complete_gd_minute_df, complete_gd_daily_df, 'GD')
                 self.initialise()
-                print(f'clientID: {self.clientId}, completed ES minute candle start: {complete_es_minute_df.iloc[[0]].index.to_list()[0]}, end: {complete_es_minute_df.iloc[[-1]].index.to_list()[0]}')
-                print(f'clientID: {self.clientId}, completed ES daily candle range: {complete_es_daily_df.index.tolist()}')
-                print(f'clientID: {self.clientId}, complete ES data analysis')
-                #logger.log_debug_msg(f'clientID: {self.clientId}, completed ES minute candle start: {complete_es_minute_df.iloc[[0]].index.to_list()[0]}, end: {complete_es_minute_df.iloc[[-1]].index.to_list()[0]}')
-                #logger.log_debug_msg(f'clientID: {self.clientId}, completed ES daily candle start: {complete_es_daily_df.index.tolist()}')
-                #logger.log_debug_msg(f'clientID: {self.clientId}, complete ES data analysis')
+                print(f'clientID: {self.clientId}, completed GD minute candle start: {complete_gd_minute_df.iloc[[0]].index.to_list()[0]}, end: {complete_gd_minute_df.iloc[[-1]].index.to_list()[0]}')
+                print(f'clientID: {self.clientId}, completed GD daily candle range: {complete_gd_daily_df.index.tolist()}')
+                print(f'clientID: {self.clientId}, complete GD data analysis')
+                #logger.log_debug_msg(f'clientID: {self.clientId}, completed GD minute candle start: {complete_gd_minute_df.iloc[[0]].index.to_list()[0]}, end: {complete_gd_minute_df.iloc[[-1]].index.to_list()[0]}')
+                #logger.log_debug_msg(f'clientID: {self.clientId}, completed GD daily candle start: {complete_gd_daily_df.index.tolist()}')
+                #logger.log_debug_msg(f'clientID: {self.clientId}, complete GD data analysis')
                 #self.cancelHistoricalData(20000)
                 #self.cancelHistoricalData(21000)
                 self.data_finished.set()
@@ -189,13 +189,13 @@ class GoldIndexData(EClient, EWrapper):
                 # with pd.option_context('display.max_rows', None,
                 #                            'display.max_columns', None,
                 #                         'display.precision', 3):
-                #     logger.log_debug_msg(complete_es_minute_df)
+                #     logger.log_debug_msg(complete_gd_minute_df)
 
                 # #debug
                 # with pd.option_context('display.max_rows', None,
                 #                            'display.max_columns', None,
                 #                         'display.precision', 3):
-                #     logger.log_debug_msg(complete_es_daily_df)
+                #     logger.log_debug_msg(complete_gd_daily_df)
         except Exception as e:
             print(traceback.format_exc())
             self.error_list.append(e)

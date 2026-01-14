@@ -15,15 +15,19 @@ YESTERDAY_BULLISH_DAILY_CANDLE = 'YESTERDAY BULLISH DAILY CANDLE'
 NQ_RAMP_UP = 'NQ RAMP UP'
 ES_RAMP_UP = 'ES RAMP UP'
 YM_RAMP_UP = 'YM RAMP UP'
+GD_RAMP_UP = 'GD RAMP UP'
 NQ_CLOSE_PCT_UP = 'NQ CLOSE PCT UP'
 ES_CLOSE_PCT_UP = 'ES CLOSE PCT UP'
 YM_CLOSE_PCT_UP = 'YM CLOSE PCT UP'
+GD_CLOSE_PCT_UP = 'GD CLOSE PCT UP'
 NQ_DIP = 'NQ DIP'
 ES_DIP = 'ES DIP'
 YM_DIP = 'YM DIP'
+GD_DIP = 'GD DIP'
 NQ_CLOSE_PCT_DOWN = 'NQ CLOSE PCT DOWN'
 ES_CLOSE_PCT_DOWN = 'ES CLOSE PCT DOWN'
 YM_CLOSE_PCT_DOWN = 'YM CLOSE PCT DOWN'
+GD_CLOSE_PCT_DOWN = 'YM CLOSE PCT DOWN'
 
 channel_to_url_dict = {
     MAIN_BOT: get_config('MAIN', 'BOT_TOKEN'),
@@ -42,6 +46,10 @@ channel_to_url_dict = {
     YM_CLOSE_PCT_UP: get_config('YM_CLOSE_PCT_UP', 'BOT_TOKEN'),
     YM_DIP: get_config('YM_DIP', 'BOT_TOKEN'),
     YM_CLOSE_PCT_DOWN: get_config('YM_CLOSE_PCT_DOWN', 'BOT_TOKEN'),
+    GD_RAMP_UP: get_config('GD_RAMP_UP', 'BOT_TOKEN'),
+    GD_CLOSE_PCT_UP: get_config('GD_CLOSE_PCT_UP', 'BOT_TOKEN'),
+    GD_DIP: get_config('GD_DIP', 'BOT_TOKEN'),
+    GD_CLOSE_PCT_DOWN: get_config('GD_CLOSE_PCT_DOWN', 'BOT_TOKEN')
 }
 
 channel_to_bot_name_dict = {
@@ -60,7 +68,11 @@ channel_to_bot_name_dict = {
     YM_RAMP_UP: 'ramp up scanner',
     YM_CLOSE_PCT_UP: 'pop scanner',
     YM_DIP: 'dip scanner',
-    YM_CLOSE_PCT_DOWN: 'dip scanner'
+    YM_CLOSE_PCT_DOWN: 'dip scanner',
+    GD_RAMP_UP: 'ramp up scanner',
+    GD_CLOSE_PCT_UP: 'pop scanner',
+    GD_DIP: 'dip scanner',
+    GD_CLOSE_PCT_DOWN: 'dip scanner'
 }
 
 def send_message(channel, message, tts=False):

@@ -8,7 +8,7 @@ from utils.logger import Logger
 from utils.dataframe_util import get_ticker_to_occurrence_idx_list
 from utils.datetime_util import convert_into_human_readable_time, convert_into_read_out_time
 
-from notification.discord_client import NQ_DIP, NQ_CLOSE_PCT_DOWN, ES_DIP, ES_CLOSE_PCT_DOWN, YM_DIP, YM_CLOSE_PCT_DOWN, send_message
+from notification.discord_client import NQ_DIP, NQ_CLOSE_PCT_DOWN, ES_DIP, ES_CLOSE_PCT_DOWN, YM_DIP, YM_CLOSE_PCT_DOWN, GD_DIP, GD_CLOSE_PCT_DOWN, send_message
 
 from database.sqlite_connector import execute_in_transaction
 
@@ -141,7 +141,9 @@ def analyse_index_dip(minute_df, daily_df, index) -> None:
         elif index == 'ES':
             send_channel = ES_DIP
         elif index == 'YM':
-            send_channel =YM_DIP
+            send_channel = YM_DIP
+        elif index == 'GD':
+            send_channel = GD_DIP
         
         send_message_time = time.time()
         if len(readout_message_list) > 0:
@@ -219,7 +221,9 @@ def analyse_index_dip(minute_df, daily_df, index) -> None:
         elif index == 'ES':
             send_channel = ES_CLOSE_PCT_DOWN
         elif index == 'YM':
-            send_channel =YM_CLOSE_PCT_DOWN
+            send_channel = YM_CLOSE_PCT_DOWN
+        elif index == 'GD':
+            send_channel = GD_CLOSE_PCT_DOWN
     
         send_message_time = time.time()
         if len(readout_message_list) > 0:

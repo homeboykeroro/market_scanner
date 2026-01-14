@@ -8,7 +8,7 @@ from utils.logger import Logger
 from utils.dataframe_util import get_ticker_to_occurrence_idx_list
 from utils.datetime_util import convert_into_human_readable_time, convert_into_read_out_time
 
-from notification.discord_client import NQ_RAMP_UP, NQ_CLOSE_PCT_UP, ES_RAMP_UP, ES_CLOSE_PCT_UP, YM_RAMP_UP, YM_CLOSE_PCT_UP, send_message
+from notification.discord_client import NQ_RAMP_UP, NQ_CLOSE_PCT_UP, ES_RAMP_UP, ES_CLOSE_PCT_UP, YM_RAMP_UP, YM_CLOSE_PCT_UP, GD_RAMP_UP, GD_CLOSE_PCT_UP, send_message
 
 from database.sqlite_connector import execute_in_transaction
 
@@ -143,7 +143,9 @@ def analyse_index_pop(minute_df, daily_df, index) -> None:
         elif index == 'ES':
             send_channel = ES_RAMP_UP
         elif index == 'YM':
-            send_channel =YM_RAMP_UP
+            send_channel = YM_RAMP_UP
+        elif index == 'GD':
+            send_channel = GD_RAMP_UP
         
         send_message_time = time.time()
         if len(readout_message_list) > 0:
@@ -221,7 +223,9 @@ def analyse_index_pop(minute_df, daily_df, index) -> None:
         elif index == 'ES':
             send_channel = ES_CLOSE_PCT_UP
         elif index == 'YM':
-            send_channel =YM_CLOSE_PCT_UP
+            send_channel = YM_CLOSE_PCT_UP
+        elif index == 'GD':
+            send_channel = GD_CLOSE_PCT_UP
             
         send_message_time = time.time()
         if len(readout_message_list) > 0:

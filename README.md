@@ -1,10 +1,13 @@
 # Market Monitor
 
 ### Purposes
-- Fetch US major indice futures (Nasdaq, S&P500 and Dow Jones) candlestick data and analysis their price actions and send notification to discord server
+- Fetch US major indice futures (Gold, Nasdaq, S&P500 and Dow Jones) candlestick data and analysis their price actions and send notification to discord server
 - Fetch US market top gainer stock candlestick data and analysis their price actions and send notification to discord server
 
 ### Demonstration
+![alt text](img/image-4.png)
+
+![alt text](img/image-5.png)
 
 
 ### Pre-Requisite
@@ -16,10 +19,11 @@ https://www.interactivebrokers.com/campus/ibkr-quant-news/interactive-brokers-py
 ### Build Executable File
 - Run `pip install -r requirements.txt` to install project dependencies
 - Run `pip install pyinstaller` to install pyinstaller (if applicable)
-- Run `pyinstaller nq.spec` to build Nasdaq index futures scanner
-- Run `pyinstaller es.spec` to build S&P500 index futures scanner
-- Run `pyinstaller ym.spec` to build Dow Jones index futures scanner
-- Run `pyinstaller top_gainer.spec` to build top gainer scanner
+- Run `pyinstaller gold.spec -y` to build gold index futures scanner
+- Run `pyinstaller nq.spec -y` to build Nasdaq index futures scanner
+- Run `pyinstaller es.spec -y` to build S&P500 index futures scanner
+- Run `pyinstaller ym.spec -y` to build Dow Jones index futures scanner
+- Run `pyinstaller top_gainer.spec -y` to build top gainer scanner
 <br />
 
 ### Core Dependencies
@@ -34,11 +38,11 @@ https://www.interactivebrokers.com/campus/ibkr-quant-news/interactive-brokers-py
 1. Login IB Gateway
 2. Run all scanners (`.exe`) files built from pyinstaller
 
-![alt text](image-1.png)
+![alt text](img/image-1.png)
 
-![alt text](image-3.png)
+![alt text](img/image-3.png)
 
-![alt text](image-2.png)
+![alt text](img/image-2.png)
 
 ### Export Dependencies list
 1. Run `pip3 freeze > requirements.txt`

@@ -93,14 +93,14 @@ class GoldIndexData(EClient, EWrapper):
             else:
                 dt = datetime.datetime.strptime(bar.date, '%Y%m%d').strftime('%Y-%m-%d')
 
-            if reqId == 20000:
+            if reqId == 40000:
                 ohlcv_list = []
                 ohlcv_list.append([open, high, low, close, volume])
                 ticker_to_indicator_column = pd.MultiIndex.from_product([['GD'], ['Open', 'High', 'Low', 'Close', 'Volume']])
                 single_ticker_candle_df = pd.DataFrame(ohlcv_list, columns=ticker_to_indicator_column, index=[dt])
                 self.gd_futures_df_dict[dt] = single_ticker_candle_df 
 
-            if reqId == 21000:
+            if reqId == 41000:
                 ohlcv_list = []
                 ohlcv_list.append([open, high, low, close, volume])
                 ticker_to_indicator_column = pd.MultiIndex.from_product([['GD'], ['Open', 'High', 'Low', 'Close', 'Volume']])

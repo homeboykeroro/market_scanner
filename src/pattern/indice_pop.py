@@ -21,6 +21,9 @@ MIN_MARUBOZU_RATIO = 40
 HIT_SCANNER_VALID_PERIOD_IN_MIN = 10
 
 def analyse_index_pop(minute_df, daily_df, index) -> None:
+    if index == 'CL':
+        MIN_INDEX_CLOSE_PCT = 0.07
+    
     analyse_start_time = time.time()
     
     candle_colour_df = minute_df.loc[:, idx[:, 'Candle Colour']].rename(columns={'Candle Colour': 'Compare'})
@@ -146,6 +149,8 @@ def analyse_index_pop(minute_df, daily_df, index) -> None:
             send_channel = YM_RAMP_UP
         elif index == 'GD':
             send_channel = GD_RAMP_UP
+        else:
+            send_channel = YM_RAMP_UP
         
         send_message_time = time.time()
         if len(readout_message_list) > 0:
@@ -226,7 +231,9 @@ def analyse_index_pop(minute_df, daily_df, index) -> None:
             send_channel = YM_CLOSE_PCT_UP
         elif index == 'GD':
             send_channel = GD_CLOSE_PCT_UP
-            
+        else:
+            send_channel = YM_CLOSE_PCT_UP
+        
         send_message_time = time.time()
         if len(readout_message_list) > 0:
             for pos, readout_message in enumerate(readout_message_list):

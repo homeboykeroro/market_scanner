@@ -141,9 +141,9 @@ class NasdaqIndexData(EClient, EWrapper):
                 if (((datetime.time(16, 0, 0) < us_current_datetime.time().replace(microsecond=0) < datetime.time(23, 59, 59))
                         or (datetime.time(0, 0, 0) <= us_current_datetime.time().replace(microsecond=0) < datetime.time(4, 0, 0)))):
                     if us_current_datetime.weekday() == 6:
-                        start_range = nearest_trading_day.replace(day=nearest_trading_day.day-1, hour=16, minute=1, second=0, microsecond=0).strftime('%Y-%m-%d %H:%M:%S')
+                        start_range = us_current_datetime.replace(hour=16, minute=1, second=0, microsecond=0).strftime('%Y-%m-%d %H:%M:%S')
                     else:
-                        start_range = nearest_trading_day.replace(hour=16, minute=1, second=0, microsecond=0).strftime('%Y-%m-%d %H:%M:%S')
+                        start_range = us_current_datetime.replace(hour=16, minute=1, second=0, microsecond=0).strftime('%Y-%m-%d %H:%M:%S')
                     
                     if datetime.time(0, 0, 0) <= us_current_datetime.time().replace(microsecond=0) < datetime.time(4, 0, 0):
                         start_range = previous_us_business_day.replace(hour=16, minute=1, second=0, microsecond=0).strftime('%Y-%m-%d %H:%M:%S')

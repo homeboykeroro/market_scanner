@@ -65,7 +65,7 @@ def main():
                 if fatal_error:
                     gd_data.initialise()
                     raise Exception(error_msg)
-            #time.sleep(5)
+            time.sleep(3)
         except Exception as e:
             gd_data.error_list = []
             

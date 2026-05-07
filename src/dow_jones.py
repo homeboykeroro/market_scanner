@@ -63,7 +63,7 @@ def main():
                 
                 if fatal_error:
                     raise Exception(error_msg)
-            time.sleep(2)
+            time.sleep(3)
         except Exception as e:
             ym_data.error_list = []
             

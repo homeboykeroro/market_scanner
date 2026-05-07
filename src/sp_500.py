@@ -65,7 +65,7 @@ def main():
                 if fatal_error:
                     es_data.initialise()
                     raise Exception(error_msg)
-            time.sleep(2)
+            time.sleep(3)
         except Exception as e:
             es_data.error_list = []
             

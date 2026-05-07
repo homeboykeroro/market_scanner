@@ -65,7 +65,7 @@ def main():
                 if fatal_error:
                     nq_data.initialise()
                     raise Exception(error_msg)
-            time.sleep(2)
+            time.sleep(3)
         except Exception as e:
             nq_data.error_list = []
             

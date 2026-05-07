@@ -140,7 +140,13 @@ class GoldIndexData(EClient, EWrapper):
 
                 if (((datetime.time(16, 0, 0) < us_current_datetime.time().replace(microsecond=0) < datetime.time(23, 59, 59))
                         or (datetime.time(0, 0, 0) <= us_current_datetime.time().replace(microsecond=0) < datetime.time(4, 0, 0)))):
-                    start_range = nearest_trading_day.replace(hour=16, minute=1, second=0, microsecond=0).strftime('%Y-%m-%d %H:%M:%S')
+                    if us_current_datetime.weekday() == 6:
+                        start_range = us_current_datetime.replace(hour=16, minute=1, second=0, microsecond=0).strftime('%Y-%m-%d %H:%M:%S')
+                    else:
+                        start_range = us_current_datetime.replace(hour=16, minute=1, second=0, microsecond=0).strftime('%Y-%m-%d %H:%M:%S')
+                    
+                    if datetime.time(0, 0, 0) <= us_current_datetime.time().replace(microsecond=0) < datetime.time(4, 0, 0):
+                        start_range = previous_us_business_day.replace(hour=16, minute=1, second=0, microsecond=0).strftime('%Y-%m-%d %H:%M:%S')
                 elif (datetime.time(4, 0, 0) <= us_current_datetime.time().replace(microsecond=0) < datetime.time(9, 30, 0)):
                     start_range = nearest_trading_day.replace(hour=4, minute=0, second=0, microsecond=0).strftime('%Y-%m-%d %H:%M:%S')
                 elif (datetime.time(9, 30, 0) <= us_current_datetime.time().replace(microsecond=0) <= datetime.time(16, 0, 0)):
@@ -155,7 +161,7 @@ class GoldIndexData(EClient, EWrapper):
                     gd_minute_df_list.append(gd_minute_df)
 
                 concat_gd_minute_df = pd.concat(gd_minute_df_list, axis=0)
-                print(f'ES original concat minute candle start datetime: {concat_gd_minute_df.iloc[[0]].index[0]}, end datetime: {concat_gd_minute_df.iloc[[-1]].index[0]}')
+                print(f'GD original concat minute candle start datetime: {concat_gd_minute_df.iloc[[0]].index[0]}, end datetime: {concat_gd_minute_df.iloc[[-1]].index[0]}')
                 concat_gd_minute_df = concat_gd_minute_df.loc[start_range:, :]
                 
                 if concat_gd_minute_df is None or concat_gd_minute_df.empty:
@@ -163,7 +169,7 @@ class GoldIndexData(EClient, EWrapper):
                     self.data_finished.set()
                     return
 
-                print(f'ES sliced concat minute candle start datetime: {concat_gd_minute_df.iloc[[0]].index[0]}, end datetime: {concat_gd_minute_df.iloc[[-1]].index[0]}')
+                print(f'GD sliced concat minute candle start datetime: {concat_gd_minute_df.iloc[[0]].index[0]}, end datetime: {concat_gd_minute_df.iloc[[-1]].index[0]}')
 
                 for dt, gd_daily_df in self.gd_futures_previous_day_df_dict.items():
                     gd_daily_df_list.append(gd_daily_df)

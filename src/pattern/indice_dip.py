@@ -23,6 +23,10 @@ HIT_SCANNER_VALID_PERIOD_IN_MIN = 10
 def analyse_index_dip(minute_df, daily_df, index) -> None:
     if index == 'CL':
         MIN_INDEX_CLOSE_PCT = -0.07
+    if index == 'HSI':
+        MIN_INDEX_CLOSE_PCT = -0.03
+    else:
+        MIN_INDEX_CLOSE_PCT = -0.03
     
     analyse_start_time = time.time()
     
@@ -125,12 +129,18 @@ def analyse_index_dip(minute_df, daily_df, index) -> None:
                         ma_50_volume = int(vol_50_ma_df.loc[occurrence_idx, (ticker, 'Compare')])
                         top_n_volume = index_top_n_volume_np
                         
+                        append_top_n_volume_msg = ''
+                        if top_n_volume is not None:
+                            if top_n_volume.size >= 3:
+                                if volume >= top_n_volume[-1]:
+                                    append_top_n_volume_msg = f', volume: {volume}'
+                            
                         yesterday_close = float(previous_day_df.loc[previous_day_df.index[-1], (ticker, 'Close')])
 
                         hit_scanner_datetime_display = convert_into_human_readable_time(occurrence_idx)
                         read_out_dip_time = convert_into_read_out_time(occurrence_idx)
 
-                        readout_message = f'{" ".join(ticker)} index dip {round(close_pct, 2)}% at {read_out_dip_time}'
+                        readout_message = f'{" ".join(ticker)} index dip {round(close_pct, 2)}% at {read_out_dip_time}{append_top_n_volume_msg}'
                         display_message = f'{ticker} index dip {round(close_pct, 2)}% at {hit_scanner_datetime_display}, close: {close}, previous close: {yesterday_close}, volume: {volume:,.2f}, total volume: {total_volume:,.2f}, 20MA volume: {ma_20_volume}, 50MA volume: {ma_50_volume}, top N volume: {top_n_volume}'
                         readout_message_list.append(readout_message)
                         display_message_list.append(display_message)

@@ -19,6 +19,7 @@ MIN_INDEX_CLOSE_PCT = 0.02
 INDEX_TOP_N_VOLUME = 10
 MIN_MARUBOZU_RATIO = 40
 HIT_SCANNER_VALID_PERIOD_IN_MIN = 10
+MA_VOLUME_RATIO = 20
 
 def analyse_index_pop(minute_df, daily_df, index) -> None:
     if index == 'CL':
@@ -134,7 +135,12 @@ def analyse_index_pop(minute_df, daily_df, index) -> None:
                         if top_n_volume is not None:
                             if top_n_volume.size >= 3:
                                 if volume >= top_n_volume[-1]:
-                                    append_top_n_volume_msg = f', volume: {volume}'
+                                    append_top_n_volume_msg = f', with top volume'
+                                else:
+                                    if volume >= (ma_20_volume * MA_VOLUME_RATIO):
+                                        append_top_n_volume_msg = f', above 20MA volume'
+                                    if volume >= (ma_50_volume * MA_VOLUME_RATIO):
+                                        append_top_n_volume_msg = f', above 50MA volume'
 
                         yesterday_close = float(previous_day_df.loc[previous_day_df.index[-1], (ticker, 'Close')])
                         previous_close_pct = round((((close - yesterday_close) / yesterday_close) * 100), 2)
@@ -142,7 +148,7 @@ def analyse_index_pop(minute_df, daily_df, index) -> None:
                         hit_scanner_datetime_display = convert_into_human_readable_time(occurrence_idx)
                         read_out_ramp_up_time = convert_into_read_out_time(occurrence_idx)
 
-                        readout_message = f'{" ".join(ticker)} index ramp up {round(close_pct, 2)}% at {read_out_ramp_up_time}{append_top_n_volume_msg}'
+                        readout_message = f'{" ".join(ticker)} index ramp up {round(close_pct, 2)}% at {read_out_ramp_up_time}, volume: {volume}{append_top_n_volume_msg}'
                         display_message = f'{ticker} index ramp up {round(close_pct, 2)}% at {hit_scanner_datetime_display}, close: {close}, previous close: {yesterday_close}, volume: {volume:,.2f}, total volume: {total_volume:,.2f}, 20MA volume: {ma_20_volume}, 50MA volume: {ma_50_volume}, top N volume: {top_n_volume}'
                         readout_message_list.append(readout_message)
                         display_message_list.append(display_message)
